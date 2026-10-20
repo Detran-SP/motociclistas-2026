@@ -1,0 +1,772 @@
+---
+title: ""
+author: ""
+format: 
+  dashboard:
+    orientation: columns
+    embed-resources: true
+    scrolling: false
+    logo: detran-logo.png
+    css: estilos.css
+    include-in-header:
+      - text: |
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap" rel="stylesheet">
+          <style>
+            /* Título do mapa: Open Sans Semibold */
+            h1, .h1, .navbar-brand, .navbar .navbar-title, .navbar-nav .nav-link,
+            .nav-page-text, .card-header {
+              font-family: "Open Sans", sans-serif !important;
+              font-weight: 600 !important;
+            }
+          </style>
+execute:
+  message: false
+  warning: false
+brand:
+  color:
+    background: "#FFFFFF"
+    foreground: "#191C1D"
+    primary: "#FFFFFF"
+typography:
+  fonts:
+    - family: opensans
+      source: google
+  base: opensans
+  headings: opensans
+---
+
+```{r, include = FALSE}
+#| label: Bibliotecas
+
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmlwidgets)
+```
+
+```{r, include = FALSE}
+#| label: Configuração
+
+# Coluna com o nome da superintendência no arquivo de superintendências
+col_super_nome <- "superinten"
+
+# Colunas do arquivo de municípios. NULL = o código tenta identificar sozinho.
+#   - nome do município (ex.: "NM_MUN", "MUNICIPIO")
+#   - superintendência à qual o município pertence (ex.: "SUPERINTEN")
+#     Se não existir, o vínculo é feito espacialmente (ponto dentro do polígono).
+col_mun_nome  <- NULL
+col_mun_super <- NULL
+```
+
+```{r, include = FALSE}
+#| label: Funções
+
+# Remove acentos e padroniza caixa (ex.: "NÃO" -> "nao")
+# Também ignora pontuação nas pontas (ex.: "Sim." -> "sim")
+norm <- function(x) {
+  x <- tolower(trimws(stringi::stri_trans_general(as.character(x), "Latin-ASCII")))
+  gsub("^[^a-z0-9]+|[^a-z0-9]+$", "", x)
+}
+
+# Texto limpo: vazio vira NA
+rotulo <- function(x) {
+  x <- trimws(as.character(x))
+  x[x %in% c("", "NA")] <- NA_character_
+  x
+}
+
+# Número (aceita vírgula decimal)
+num <- function(x) {
+  if (is.numeric(x)) return(as.numeric(x))
+  suppressWarnings(as.numeric(gsub(",", ".", trimws(as.character(x)), fixed = TRUE)))
+}
+
+# Localiza uma coluna ignorando caixa e acentos
+acha_coluna <- function(df, padroes, apenas_texto = FALSE, descricao = "") {
+  nomes <- setdiff(names(df), attr(df, "sf_column"))
+  if (apenas_texto) nomes <- nomes[sapply(st_drop_geometry(df)[nomes], is.character)]
+  nomes_n <- tolower(stringi::stri_trans_general(nomes, "Latin-ASCII"))
+  for (p in padroes) {
+    i <- which(grepl(p, nomes_n))
+    if (length(i) > 0) return(nomes[i[1]])
+  }
+  stop("Coluna não encontrada: ", descricao, ". Colunas disponíveis: ",
+       paste(names(df), collapse = ", "))
+}
+
+# Simplifica geometrias para deixar o HTML leve (preserva fronteiras compartilhadas
+# se o pacote rmapshaper estiver instalado)
+simplifica <- function(x) {
+  if (requireNamespace("rmapshaper", quietly = TRUE)) {
+    rmapshaper::ms_simplify(x, keep = 0.15, keep_shapes = TRUE)
+  } else {
+    x |> 
+      st_transform(31983) |> 
+      st_simplify(preserveTopology = TRUE, dTolerance = 100) |> 
+      st_transform(4326)
+  }
+}
+
+# sf -> texto GeoJSON
+para_geojson <- function(x) {
+  tmp <- tempfile(fileext = ".geojson")
+  st_write(x, tmp, driver = "GeoJSON", quiet = TRUE,
+           layer_options = "COORDINATE_PRECISION=5")
+  paste(readLines(tmp, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+}
+```
+
+```{r, include = FALSE}
+#| label: Importação
+
+super <- st_read("../input/Superintendencias_DETRAN.gpkg", quiet = TRUE) |> 
+  st_transform(4326) |> 
+  st_make_valid()
+
+mun <- st_read("../output/DESEG_Campanha_Municipios.gpkg", quiet = TRUE) |> 
+  st_transform(4326) |> 
+  st_make_valid()
+
+# Atalho para acessar as colunas do arquivo de municípios pelo nome original
+v <- function(nome) mun[[acha_coluna(mun, paste0("^", tolower(nome), "$"), descricao = nome)]]
+```
+
+```{r, include = FALSE}
+#| label: Preparação
+
+# ---- Superintendências ----
+col_s <- acha_coluna(super, c(paste0("^", col_super_nome, "$"), "superinten"),
+                     apenas_texto = TRUE, descricao = "nome da superintendência")
+super_js <- st_sf(nome = as.character(super[[col_s]]), geometry = st_geometry(super))
+
+# ---- Município -> superintendência ----
+if (is.null(col_mun_nome)) {
+  col_mun_nome <- acha_coluna(mun, c("^nm_mun", "^nome_mun", "^municipio$", "^nm_municipio", "munic"),
+                              apenas_texto = TRUE, descricao = "nome do município")
+}
+
+super_mun <- NULL
+col_ms <- col_mun_super
+if (is.null(col_ms)) {
+  col_ms <- tryCatch(acha_coluna(mun, "superinten", apenas_texto = TRUE), error = function(e) NULL)
+}
+if (!is.null(col_ms)) {
+  super_mun <- as.character(mun[[col_ms]])
+  if (!all(super_mun[!is.na(super_mun)] %in% super_js$nome)) {
+    message("Nomes de superintendência do arquivo de municípios não batem com o arquivo de superintendências; usando vínculo espacial.")
+    super_mun <- NULL
+  }
+}
+if (is.null(super_mun)) {
+  pts <- mun |> st_transform(31983) |> st_geometry() |> st_point_on_surface()
+  idx <- st_within(pts, st_transform(super_js, 31983))
+  super_mun <- super_js$nome[sapply(idx, function(i) if (length(i) > 0) i[1] else NA_integer_)]
+}
+if (anyNA(super_mun)) {
+  warning(sum(is.na(super_mun)), " município(s) sem superintendência: não aparecerão no mapa.")
+}
+
+# ---- Atributos usados no mapa ----
+mun_js <- st_sf(
+  nome       = as.character(mun[[col_mun_nome]]),
+  super      = super_mun,
+  # 1 = município SEM adesão ao SISTRAN (cinza escuro hachurado)
+  sem_adesao = as.integer(norm(v("ADESAO_SISTRAN")) %in% "nao"),
+  saude      = rotulo(v("DEPARTAMENTO_REGIONAL_SAUDE")),
+  pm         = rotulo(v("COMANDO_POLICIA_MILITAR")),
+  der        = rotulo(v("DIVISAO_REGIONAL_DER")),
+  # PRF: rodovia federal concedida OU não concedida
+  prf        = as.integer(norm(v("RODOVIA_FEDERAL_NAO_CONCEDIDA")) %in% "sim" |
+                          norm(v("RODOVIA_FEDERAL_CONCEDIDA")) %in% "sim"),
+  # ANTT: rodovia federal concedida
+  antt       = as.integer(norm(v("RODOVIA_FEDERAL_CONCEDIDA")) %in% "sim"),
+  # Artesp: rodovia estadual concedida
+  artesp     = as.integer(norm(v("RODOVIA_ESTADUAL_CONCEDIDA")) %in% "sim"),
+  acoes      = rotulo(v("ACOES_FISCALIZACAO")),
+  abordagens = rotulo(v("ABORDAGENS_EDUCATIVAS")),
+  snt        = rotulo(v("ADESAO_SNT")),
+  # Pontos focais (exibidos no popup)
+  pf_drs     = rotulo(v("PONTO_FOCAL_DRS")),
+  pf_pm      = rotulo(v("PONTO_FOCAL_PMESP")),
+  pf_der     = rotulo(v("PONTO_FOCAL_DER")),
+  # Camadas graduadas / nível de apoio
+  nivel_apoio    = num(v("NIVEL_APOIO")),
+  prop_obitos    = num(v("PROPORCAO_OBITOS")),
+  prop_sinistros = num(v("PROPORCAO_SINISTROS")),
+  geometry   = st_geometry(mun)
+) |> 
+  filter(!is.na(super)) |> 
+  simplifica()
+
+super_js <- simplifica(super_js)
+```
+
+```{r, include = FALSE}
+#| label: JavaScript
+
+js <- r"---(
+function(el, x, data) {
+  var map = this;
+  var SUPER = JSON.parse(data.super);
+  var MUN   = JSON.parse(data.mun);
+
+  // ------------------------------------------------------------------
+  // Configuração: cores, temas e paleta
+  // ------------------------------------------------------------------
+  var SEM_INFO = 'Sem informação';
+  var PAT_ID   = 'mdn-hachura-sem-adesao';
+  var COR = {
+    superClara : '#D9D9D9',  // superintendências (estado inteiro)
+    superEscura: '#9A9A9A',  // demais superintendências quando uma está selecionada
+    contorno   : '#FFFFFF',
+    semAdesao  : '#6E6E6E',  // fundo da hachura (municípios sem adesão ao SISTRAN)
+    nao        : '#E3E3E3',  // "Não" nas camadas Sim/Não
+    semInfo    : '#C4C4C4',
+    destaque   : '#333333'   // contorno da superintendência selecionada
+  };
+
+  // Ordem pensada para que valores vizinhos na lista tenham bom contraste.
+  // Inclui as cores-base e alguns tons intermediários de azul, roxo e cinza.
+  var PALETA = ['#004077', '#D3A1FA', '#005CA8', '#B456E0', '#A4CFED',
+                '#390077', '#3F8FD2', '#7B2FBE', '#8C8C8C', '#6FAEDB'];
+
+  // Rótulos dos valores Sim/Não (podem variar por tema)
+  var ROT_SIMNAO    = {sim: 'Sim',     nao: 'Não'};
+  var ROT_REALIZA   = {sim: 'Realiza', nao: 'Não realiza'};
+
+  // A ordem desta lista define a ordem (e os grupos) do seletor "Camada"
+  var TEMAS = [
+    // ---- Apoio para campanha ----
+    // Nível de apoio (1 a 4): valores discretos, em tons de azul. O nível 0 corresponde aos
+    // municípios sem adesão ao SISTRAN, que já aparecem hachurados.
+    {grupo:'Apoio para campanha', id:'nivel', nome:'Nível de apoio', campo:'nivel_apoio', titulo:'Nível de apoio',
+     desc:'Construído a partir da adesão ao SNT, das ações de fiscalização e das abordagens educativas',
+     fixas:{'1':'#D0E5F5', '2':'#A4CFED', '3':'#005CA8', '4':'#004077'}},
+    {grupo:'Apoio para campanha', id:'snt',   nome:'Adesão ao SNT',        campo:'snt',        titulo:'Adesão ao SNT',
+     cor:'#005CA8', rot:ROT_SIMNAO},
+    {grupo:'Apoio para campanha', id:'acoes', nome:'Ações de fiscalização', campo:'acoes',      titulo:'Ações de fiscalização',
+     cor:'#004077', rot:ROT_REALIZA},
+    {grupo:'Apoio para campanha', id:'abord', nome:'Abordagens educativas', campo:'abordagens', titulo:'Abordagens educativas',
+     cor:'#004077', rot:ROT_REALIZA},
+    // ---- Divisões regionais ----
+    {grupo:'Divisões regionais', id:'der',   nome:'DER-SP', campo:'der',   titulo:'Divisão Regional do DER-SP', pf:'pf_der'},
+    {grupo:'Divisões regionais', id:'saude', nome:'SES-SP', campo:'saude', titulo:'Departamento Regional de Saúde (SES-SP)', pf:'pf_drs'},
+    {grupo:'Divisões regionais', id:'pm',    nome:'PMESP',  campo:'pm',    titulo:'Comando da Polícia Militar (PMESP)', pf:'pf_pm'},
+    // ---- Gestão Rodoviária ----
+    {grupo:'Gestão Rodoviária', id:'artesp', nome:'Artesp',     campo:'artesp', titulo:'Rodovia estadual concedida (Artesp)',
+     bool:true, cor:'#B456E0', rot:ROT_SIMNAO, desc:'Rodovia estadual concedida'},
+    {grupo:'Gestão Rodoviária', id:'antt',   nome:'ANTT',       campo:'antt',   titulo:'Rodovia federal concedida (ANTT)',
+     bool:true, cor:'#B456E0', rot:ROT_SIMNAO, desc:'Rodovia federal concedida'},
+    {grupo:'Gestão Rodoviária', id:'prf',    nome:'PRF e DNIT', campo:'prf',    titulo:'Rodovia federal (PRF e DNIT)',
+     bool:true, cor:'#B456E0', rot:ROT_SIMNAO, desc:'Rodovia federal concedida ou não concedida'},
+    // ---- Sinistralidade (graduadas: 4 classes por superintendência, quebras naturais de Jenks) ----
+    {grupo:'Sinistralidade', id:'pobt', nome:'Proporção de óbitos de motociclistas', campo:'prop_obitos', grad:true,
+     titulo:'Proporção de óbitos de motociclistas',
+     rampa:['#A4CFED', '#3F8FD2', '#005CA8', '#004077']},
+    {grupo:'Sinistralidade', id:'psin', nome:'Proporção de sinistros com motociclistas', campo:'prop_sinistros', grad:true,
+     titulo:'Proporção de sinistros com motociclistas',
+     rampa:['#D3A1FA', '#B456E0', '#7B2FBE', '#390077']}
+  ];
+
+  // ------------------------------------------------------------------
+  // Funções auxiliares
+  // ------------------------------------------------------------------
+  // Remove acentos, caixa e pontuação nas pontas ("Sim." -> "sim", "NÃO." -> "nao")
+  function norm(s) {
+    return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+                    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function semAdesao(p) { return +p.sem_adesao === 1; }
+
+  // Rótulo exibido para um valor em temas Sim/Não (ex.: "Sim" -> "Realiza")
+  function rotuloValor(t, v) {
+    var r = t.rot || ROT_SIMNAO;
+    var n = norm(v);
+    return n === 'sim' ? r.sim : (n === 'nao' ? r.nao : v);
+  }
+
+  // Valor (texto) de um município em um tema
+  function valorDe(p, t) {
+    var v = p[t.campo];
+    if (t.grad) return (v === null || v === undefined || v === '' || isNaN(+v)) ? SEM_INFO : +v;
+    if (t.fixas) {                                   // nível discreto: '1', '2', ...
+      var nv = Math.round(+v);
+      return (v === null || v === undefined || v === '' || isNaN(nv) || nv < 1) ? SEM_INFO : String(nv);
+    }
+    if (t.bool) return (+v === 1) ? 'Sim' : 'Não';
+    if (v === null || v === undefined || String(v).trim() === '') return SEM_INFO;
+    return String(v).trim();
+  }
+
+  // Define a cor de cada valor de um tema.
+  //  - Temas Sim/Não: "Sim" na cor do tema, "Não" em cinza claro.
+  //  - Demais: coloração gulosa, de modo que valores que aparecem na MESMA
+  //    superintendência nunca dividam a mesma cor (enquanto a paleta permitir).
+  var NCLASSES = 4;
+
+  // Quebras naturais de Jenks (Fisher-Jenks). Retorna n+1 limites: o primeiro é o
+  // mínimo e os demais são os limites superiores (inclusivos) de cada classe.
+  function jenks(dados, nClasses) {
+    var d = dados.slice().sort(function(a, b) { return a - b; });
+    var n = d.length, i, j, l, m;
+    var lower = [], variance = [];
+    for (i = 0; i <= n; i++) {
+      lower.push(new Array(nClasses + 1).fill(0));
+      variance.push(new Array(nClasses + 1).fill(0));
+    }
+    for (i = 1; i <= nClasses; i++) {
+      lower[1][i] = 1;
+      variance[1][i] = 0;
+      for (j = 2; j <= n; j++) variance[j][i] = Infinity;
+    }
+    for (l = 2; l <= n; l++) {
+      var sum = 0, sumSq = 0, w = 0, v = 0;
+      for (m = 1; m <= l; m++) {
+        var l3 = l - m + 1, val = d[l3 - 1];
+        w++; sum += val; sumSq += val * val;
+        v = sumSq - (sum * sum) / w;
+        var i4 = l3 - 1;
+        if (i4 !== 0) {
+          for (j = 2; j <= nClasses; j++) {
+            if (variance[l][j] >= v + variance[i4][j - 1]) {
+              lower[l][j] = l3;
+              variance[l][j] = v + variance[i4][j - 1];
+            }
+          }
+        }
+      }
+      lower[l][1] = 1;
+      variance[l][1] = v;
+    }
+    var k = n, cls = new Array(nClasses + 1);
+    cls[nClasses] = d[n - 1];
+    cls[0] = d[0];
+    for (var c = nClasses; c >= 2; c--) {
+      cls[c - 1] = d[lower[k][c] - 2];
+      k = lower[k][c] - 1;
+    }
+    return cls;
+  }
+
+  // Camadas graduadas: as classes são calculadas por superintendência (Jenks, até 4 classes),
+  // usando apenas os municípios com adesão ao SISTRAN daquela superintendência.
+  // Cada classe vai do seu limite inferior (inclusive) até o limite inferior da seguinte;
+  // a última é "x% ou mais".
+  function classificar(t, dados) {
+    var vs = dados.slice().sort(function(a, b) { return a - b; });
+    var dist = vs.filter(function(v, k) { return k === 0 || v !== vs[k - 1]; });
+    var nc = Math.min(NCLASSES, dist.length);
+    var lows = [vs[0]];
+    if (nc >= 2) {
+      var ub = jenks(vs, nc);                       // ub[1..nc-1] = máximos das classes
+      for (var k = 1; k < nc; k++) {
+        var nxt = dist.filter(function(x) { return x > ub[k]; })[0];
+        if (nxt !== undefined && nxt > lows[lows.length - 1]) lows.push(nxt);
+      }
+    }
+    var n = lows.length, cores = [];
+    for (var j = 0; j < n; j++) {
+      cores.push(n === 1 ? t.rampa[t.rampa.length - 1]
+                         : t.rampa[Math.round(j * (t.rampa.length - 1) / (n - 1))]);
+    }
+    return {lows: lows, n: n, cores: cores};
+  }
+
+  function construirGrad(t) {
+    var porSuper = {}, max = -Infinity;
+    MUN.features.forEach(function(f) {
+      var p = f.properties;
+      if (semAdesao(p)) return;
+      var v = valorDe(p, t);
+      if (v === SEM_INFO) return;
+      (porSuper[p.super] = porSuper[p.super] || []).push(v);
+      if (v > max) max = v;
+    });
+    t.escala = (max <= 1) ? 100 : 1;                // valores 0-1 são exibidos em %
+    t.cls = {};
+    Object.keys(porSuper).forEach(function(s) { t.cls[s] = classificar(t, porSuper[s]); });
+    t.binario = false;
+  }
+  function classeDe(c, v) {
+    for (var i = c.n - 1; i > 0; i--) { if (v >= c.lows[i]) return i; }
+    return 0;
+  }
+  function corGrad(t, v, superNome) {
+    var c = t.cls[superNome];
+    return (v === SEM_INFO || !c) ? COR.semInfo : c.cores[classeDe(c, v)];
+  }
+  function fmtNum(t, v) {
+    return (v * t.escala).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+  }
+  // Formato: "Até y%" / "De x% a y%" / "x% ou mais"
+  function rotuloClasse(t, c, i) {
+    if (c.n === 1 || i === c.n - 1) return fmtNum(t, c.lows[i]) + ' ou mais';
+    if (i === 0) return 'Até ' + fmtNum(t, c.lows[1]);
+    return 'De ' + fmtNum(t, c.lows[i]) + ' a ' + fmtNum(t, c.lows[i + 1]);
+  }
+
+  function construirCores(t) {
+    if (t.grad) { construirGrad(t); return; }
+    if (t.fixas) {
+      t.cores = {};
+      Object.keys(t.fixas).forEach(function(k) { t.cores[k] = t.fixas[k]; });
+      t.cores[SEM_INFO] = COR.semInfo;
+      t.binario = false;
+      return;
+    }
+    var cont = {}, porSuper = {};
+    MUN.features.forEach(function(f) {
+      var p = f.properties;
+      if (semAdesao(p)) return;
+      var v = valorDe(p, t);
+      if (v === SEM_INFO) return;
+      cont[v] = (cont[v] || 0) + 1;
+      (porSuper[p.super] = porSuper[p.super] || {})[v] = true;
+    });
+    var vals = Object.keys(cont);
+    var binario = !!t.bool || (vals.length > 0 && vals.every(function(v) {
+      var n = norm(v); return n === 'sim' || n === 'nao';
+    }));
+    var cores = {};
+
+    if (binario) {
+      vals.forEach(function(v) { cores[v] = (norm(v) === 'sim') ? t.cor : COR.nao; });
+    } else {
+      var viz = {};
+      vals.forEach(function(v) { viz[v] = {}; });
+      Object.keys(porSuper).forEach(function(s) {
+        var vs = Object.keys(porSuper[s]);
+        vs.forEach(function(a) { vs.forEach(function(b) { if (a !== b) viz[a][b] = true; }); });
+      });
+      vals.sort(function(a, b) { return (cont[b] - cont[a]) || a.localeCompare(b, 'pt-BR'); });
+      vals.forEach(function(v) {
+        var uso = {};
+        Object.keys(viz[v]).forEach(function(w) {
+          if (cores[w]) uso[cores[w]] = (uso[cores[w]] || 0) + 1;
+        });
+        var melhor = PALETA[0], menor = Infinity;
+        for (var i = 0; i < PALETA.length; i++) {
+          var n = uso[PALETA[i]] || 0;
+          if (n < menor) { menor = n; melhor = PALETA[i]; if (n === 0) break; }
+        }
+        cores[v] = melhor;
+      });
+    }
+    cores[SEM_INFO] = COR.semInfo;
+    t.binario = binario;
+    t.cores = cores;
+  }
+  TEMAS.forEach(construirCores);
+
+  // ------------------------------------------------------------------
+  // Estado, painéis e renderizadores
+  // ------------------------------------------------------------------
+  var TEMA = TEMAS[0];
+  var sel = null;            // nome da superintendência selecionada
+  var munLayer = null, destaqueLayer = null;
+
+  map.createPane('mdnSuper');    map.getPane('mdnSuper').style.zIndex = 410;
+  map.createPane('mdnMun');      map.getPane('mdnMun').style.zIndex = 420;
+  map.createPane('mdnDestaque'); map.getPane('mdnDestaque').style.zIndex = 430;
+  map.getPane('mdnDestaque').style.pointerEvents = 'none';
+
+  var rSuper    = L.svg({pane: 'mdnSuper'});
+  var rMun      = L.svg({pane: 'mdnMun'});
+  var rDestaque = L.svg({pane: 'mdnDestaque'});
+  map.addLayer(rSuper); map.addLayer(rMun); map.addLayer(rDestaque);
+
+  // Padrão SVG de hachura branca sobre cinza escuro
+  (function() {
+    var ns  = 'http://www.w3.org/2000/svg';
+    var svg = rMun._container;
+    var defs = document.createElementNS(ns, 'defs');
+    var pat  = document.createElementNS(ns, 'pattern');
+    pat.setAttribute('id', PAT_ID);
+    pat.setAttribute('patternUnits', 'userSpaceOnUse');
+    pat.setAttribute('width', '7');
+    pat.setAttribute('height', '7');
+    pat.setAttribute('patternTransform', 'rotate(45)');
+    var rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('width', '7'); rect.setAttribute('height', '7');
+    rect.setAttribute('fill', COR.semAdesao);
+    var line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', '0'); line.setAttribute('y1', '0');
+    line.setAttribute('x2', '0'); line.setAttribute('y2', '7');
+    line.setAttribute('stroke', '#FFFFFF'); line.setAttribute('stroke-width', '2');
+    pat.appendChild(rect); pat.appendChild(line); defs.appendChild(pat);
+    svg.insertBefore(defs, svg.firstChild);
+  })();
+
+  // ------------------------------------------------------------------
+  // CSS dos controles
+  // ------------------------------------------------------------------
+  var css = document.createElement('style');
+  css.textContent =
+    '.mdn-ctrl{background:rgba(255,255,255,.95);padding:8px 12px;border-radius:6px;' +
+      'box-shadow:0 1px 5px rgba(0,0,0,.35);font-size:13px;color:#191C1D;line-height:1.35;}' +
+    '.mdn-tit{font-weight:700;color:#004077;margin-bottom:4px;}' +
+    '.mdn-sub{font-size:13.5px;color:#555;margin:0 0 6px 0;}' +
+    '.mdn-temas{max-height:85vh;overflow:auto;}' +
+    '.mdn-grp{font-weight:700;font-size:12px;color:#555;margin:7px 0 2px 0;}' +
+    '.mdn-temas label{display:flex;align-items:center;gap:6px;cursor:pointer;padding:1px 0;margin:0;}' +
+    '.mdn-temas input{accent-color:#004077;margin:0;}' +
+    '.mdn-leg{max-width:360px;max-height:55vh;overflow:auto;font-size:15px;}' +
+    '.mdn-leg .mdn-tit{font-size:16px;}' +
+    '.mdn-it{display:flex;align-items:center;gap:7px;margin:3px 0;}' +
+    '.mdn-sw{width:18px;height:18px;flex:none;border-radius:3px;border:1px solid rgba(0,0,0,.2);}' +
+    '.mdn-sw.hach{background:repeating-linear-gradient(45deg,' + COR.semAdesao + ' 0 3px,#fff 3px 5px);}' +
+    '.mdn-btn{cursor:pointer;font-weight:600;color:#004077;border:0;background:transparent;padding:0;font-size:13px;}' +
+    '.mdn-btn:hover{text-decoration:underline;}' +
+    '.leaflet-tooltip.mdn-tip{font-weight:700;font-size:12px;padding:6px 10px;}';
+  document.head.appendChild(css);
+
+  // ------------------------------------------------------------------
+  // Camada de superintendências
+  // ------------------------------------------------------------------
+  function estiloSuper(f) {
+    var escura = sel !== null && f.properties.nome !== sel;
+    return {
+      fillColor: escura ? COR.superEscura : COR.superClara,
+      fillOpacity: 1,
+      color: COR.contorno,
+      weight: 1.5,
+      opacity: 1
+    };
+  }
+
+  var superLayer = L.geoJSON(SUPER, {
+    style: estiloSuper,
+    pane: 'mdnSuper',
+    renderer: rSuper,
+    bubblingMouseEvents: false,
+    onEachFeature: function(f, layer) {
+      var nome = f.properties.nome;
+      layer.bindTooltip(esc(nome), {sticky: true, className: 'mdn-tip'});
+      layer.on('mouseover', function() {
+        layer.setStyle({fillColor: sel === null ? '#C2C2C2' : '#858585'});
+      });
+      layer.on('mouseout', function() { superLayer.resetStyle(layer); });
+      layer.on('click', function() { if (nome !== sel) selecionar(nome); });
+    }
+  }).addTo(map);
+
+  var limitesEstado = superLayer.getBounds();
+
+  // ------------------------------------------------------------------
+  // Camada de municípios
+  // ------------------------------------------------------------------
+  function estiloMun(f) {
+    var p = f.properties;
+    var s = {color: '#FFFFFF', weight: 0.8, opacity: 1, fillOpacity: 1};
+    if (semAdesao(p)) s.fillColor = 'url(#' + PAT_ID + ')';
+    else if (TEMA.grad) s.fillColor = corGrad(TEMA, valorDe(p, TEMA), p.super);
+    else s.fillColor = TEMA.cores[valorDe(p, TEMA)] || COR.semInfo;
+    return s;
+  }
+
+  function htmlPopup(p) {
+    var h = '<b>Município:</b> ' + esc(p.nome) +
+            '<br><b>Superintendência:</b> ' + esc(p.super) + '<br><br>';
+    if (semAdesao(p)) return h + 'Sem adesão ao SISTRAN';
+    var out = '', grupo = null;
+    TEMAS.forEach(function(t) {
+      var v = valorDe(p, t), txt;
+      if (v === SEM_INFO) txt = SEM_INFO;
+      else if (t.grad)    txt = fmtNum(t, v);
+      else if (t.binario) txt = rotuloValor(t, v);
+      else                txt = v;
+      if (grupo !== null) out += (t.grupo !== grupo) ? '<br><br>' : '<br>';   // linha em branco entre grupos
+      grupo = t.grupo;
+      out += '<b>' + esc(t.titulo) + ':</b> ' + esc(txt);
+      if (t.pf) {                                    // ponto focal logo abaixo do órgão
+        var pf = p[t.pf];
+        pf = (pf === null || pf === undefined || String(pf).trim() === '') ? SEM_INFO : String(pf).trim();
+        out += '<br><b>Ponto focal (' + esc(t.nome) + '):</b> ' + esc(pf).replace(/\r?\n/g, '<br>');
+      }
+    });
+    return h + out;
+  }
+
+  function mostrarMunicipios(nome) {
+    if (munLayer) { map.removeLayer(munLayer); munLayer = null; }
+    var feats = MUN.features.filter(function(f) { return f.properties.super === nome; });
+    munLayer = L.geoJSON({type: 'FeatureCollection', features: feats}, {
+      style: estiloMun,
+      pane: 'mdnMun',
+      renderer: rMun,
+      bubblingMouseEvents: false,
+      onEachFeature: function(f, layer) {
+        layer.bindTooltip(esc(f.properties.nome), {sticky: true, className: 'mdn-tip'});
+        layer.bindPopup(htmlPopup(f.properties), {maxWidth: 320});
+        layer.on('mouseover', function() {
+          layer.setStyle({color: '#222222', weight: 2});
+          layer.bringToFront();
+        });
+        layer.on('mouseout', function() { munLayer.resetStyle(layer); });
+      }
+    }).addTo(map);
+  }
+
+  // ------------------------------------------------------------------
+  // Seleção / reset
+  // ------------------------------------------------------------------
+  function selecionar(nome) {
+    sel = nome;
+    map.closePopup();
+    superLayer.setStyle(estiloSuper);
+    mostrarMunicipios(nome);
+
+    if (destaqueLayer) { map.removeLayer(destaqueLayer); }
+    var feat = SUPER.features.filter(function(f) { return f.properties.nome === nome; });
+    destaqueLayer = L.geoJSON({type: 'FeatureCollection', features: feat}, {
+      style: {fill: false, color: COR.destaque, weight: 2.5, opacity: 1},
+      pane: 'mdnDestaque',
+      renderer: rDestaque,
+      interactive: false
+    }).addTo(map);
+
+    map.fitBounds(destaqueLayer.getBounds(), {padding: [30, 30]});
+    btnDiv.style.display = '';
+    atualizarLegenda();
+  }
+
+  function voltar() {
+    sel = null;
+    map.closePopup();
+    if (munLayer)      { map.removeLayer(munLayer);      munLayer = null; }
+    if (destaqueLayer) { map.removeLayer(destaqueLayer); destaqueLayer = null; }
+    superLayer.setStyle(estiloSuper);
+    map.fitBounds(limitesEstado);
+    btnDiv.style.display = 'none';
+    atualizarLegenda();
+  }
+
+  function setTema(id) {
+    TEMA = TEMAS.filter(function(t) { return t.id === id; })[0];
+    if (munLayer) munLayer.setStyle(estiloMun);
+    atualizarLegenda();
+  }
+
+  map.on('click', function() { if (sel !== null) voltar(); });
+
+  // ------------------------------------------------------------------
+  // Controles: camadas (toggle), botão de voltar e legenda
+  // ------------------------------------------------------------------
+  var ctrlTemas = L.control({position: 'topright'});
+  ctrlTemas.onAdd = function() {
+    var d = L.DomUtil.create('div', 'mdn-ctrl mdn-temas');
+    var h = '<div class="mdn-tit">Camada</div>', grupoAtual = null;
+    TEMAS.forEach(function(t, i) {
+      if (t.grupo !== grupoAtual) {
+        grupoAtual = t.grupo;
+        h += '<div class="mdn-grp">' + esc(t.grupo) + '</div>';
+      }
+      h += '<label><input type="radio" name="mdn-tema" value="' + t.id + '"' +
+           (i === 0 ? ' checked' : '') + '><span>' + esc(t.nome) + '</span></label>';
+    });
+    d.innerHTML = h;
+    L.DomEvent.disableClickPropagation(d);
+    L.DomEvent.disableScrollPropagation(d);
+    d.addEventListener('change', function(e) { setTema(e.target.value); });
+    return d;
+  };
+  ctrlTemas.addTo(map);
+
+  var btnDiv;
+  var ctrlBtn = L.control({position: 'topleft'});
+  ctrlBtn.onAdd = function() {
+    btnDiv = L.DomUtil.create('div', 'mdn-ctrl');
+    btnDiv.style.display = 'none';
+    btnDiv.innerHTML = '<button type="button" class="mdn-btn">&larr; Estado inteiro</button>';
+    L.DomEvent.disableClickPropagation(btnDiv);
+    btnDiv.querySelector('button').addEventListener('click', voltar);
+    return btnDiv;
+  };
+  ctrlBtn.addTo(map);
+
+  var legDiv;
+  var ctrlLeg = L.control({position: 'bottomleft'});
+  ctrlLeg.onAdd = function() {
+    legDiv = L.DomUtil.create('div', 'mdn-ctrl mdn-leg');
+    L.DomEvent.disableClickPropagation(legDiv);
+    L.DomEvent.disableScrollPropagation(legDiv);
+    return legDiv;
+  };
+  ctrlLeg.addTo(map);
+
+  function atualizarLegenda() {
+    if (sel === null) {
+      legDiv.innerHTML = '<div class="mdn-tit">Superintendências do Detran-SP</div>' +
+                         '<div>Clique em uma superintendência para ver os municípios.</div>';
+      return;
+    }
+    var cont = {}, nSem = 0;
+    MUN.features.forEach(function(f) {
+      var p = f.properties;
+      if (p.super !== sel) return;
+      if (semAdesao(p)) { nSem++; return; }
+      var v = valorDe(p, TEMA);
+      var k = (TEMA.grad && v !== SEM_INFO) ? classeDe(TEMA.cls[sel], v) : v;
+      cont[k] = (cont[k] || 0) + 1;
+    });
+    var vals = Object.keys(cont).filter(function(v) { return v !== SEM_INFO; });
+    var cl = TEMA.grad ? TEMA.cls[sel] : null;
+    if (TEMA.grad) {
+      vals = [];
+      for (var c = 0; c < (cl ? cl.n : 0); c++) vals.push(String(c));
+    }
+    if (TEMA.fixas) vals = Object.keys(TEMA.fixas);     // mostra todos os níveis, mesmo com 0 município
+    vals.sort(function(a, b) {
+      if (TEMA.binario) return (norm(a) === 'sim' ? 0 : 1) - (norm(b) === 'sim' ? 0 : 1);
+      return a.localeCompare(b, 'pt-BR');
+    });
+    if (cont[SEM_INFO]) vals.push(SEM_INFO);
+
+    function item(sw, txt, n) {
+      return '<div class="mdn-it">' + sw + '<span>' + esc(txt) + ' (' + n + ')</span></div>';
+    }
+    var h = '<div class="mdn-tit">' + esc(sel) + '</div>' +
+            '<div class="mdn-sub">' + esc(TEMA.titulo) + (TEMA.desc ? ' &ndash; ' + esc(TEMA.desc) : '') +
+            (TEMA.grad ? ' &ndash; classes definidas dentro da superintendência' : '') + '</div>';
+    vals.forEach(function(v) {
+      if (TEMA.grad && v === SEM_INFO) {
+        h += item('<span class="mdn-sw" style="background:' + COR.semInfo + ';"></span>', SEM_INFO, cont[v]);
+      } else if (TEMA.grad) {
+        h += item('<span class="mdn-sw" style="background:' + cl.cores[+v] + ';"></span>',
+                  rotuloClasse(TEMA, cl, +v), cont[v] || 0);
+      } else {
+        h += item('<span class="mdn-sw" style="background:' + TEMA.cores[v] + ';"></span>',
+                  TEMA.binario ? rotuloValor(TEMA, v) : (TEMA.fixas && v !== SEM_INFO ? 'Nível ' + v : v), cont[v] || 0);
+      }
+    });
+    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Sem adesão ao SISTRAN', nSem);
+    legDiv.innerHTML = h;
+  }
+  atualizarLegenda();
+}
+)---"
+```
+
+```{r, include = FALSE}
+#| label: Limites
+
+bb <- st_bbox(super_js)
+```
+
+# Campanha Motociclistas 2026
+```{r}
+#| label: Mapa
+
+leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
+  addProviderTiles("Esri.WorldGrayCanvas") |>
+  fitBounds(lng1 = bb[["xmin"]], lat1 = bb[["ymin"]],
+            lng2 = bb[["xmax"]], lat2 = bb[["ymax"]]) |>
+  onRender(js, data = list(super = para_geojson(super_js),
+                           mun   = para_geojson(mun_js)))
+```
