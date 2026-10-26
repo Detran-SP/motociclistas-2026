@@ -212,6 +212,13 @@ function(el, x, data) {
   var SUPER = JSON.parse(data.super);
   var MUN   = JSON.parse(data.mun);
 
+  window.leafletMap = map;
+  window.geojsonSuper = SUPER;
+  window.geojsonMun = MUN;
+  if (typeof window.initTabelaDados === 'function') {
+    window.initTabelaDados(MUN.features);
+  }
+
   // ------------------------------------------------------------------
   // Configuração: cores, temas e paleta
   // ------------------------------------------------------------------
@@ -239,11 +246,17 @@ function(el, x, data) {
   // A ordem desta lista define a ordem (e os grupos) do seletor "Camada"
   var TEMAS = [
     // ---- Apoio para campanha ----
-    // Nível de apoio (1 a 4): valores discretos, em tons de azul. O nível 0 corresponde aos
-    // municípios sem adesão ao SISTRAN, que já aparecem hachurados.
+    // Nível de apoio: valores discretos em gradação de azul. Os municípios sem adesão ao
+    // SISTRAN aparecem hachurados.
     {grupo:'Apoio para campanha', id:'nivel', nome:'Nível de apoio', campo:'nivel_apoio', titulo:'Nível de apoio',
      desc:'Construído a partir da adesão ao SNT, das ações de fiscalização e das abordagens educativas',
-     fixas:{'1':'#D0E5F5', '2':'#A4CFED', '3':'#005CA8', '4':'#004077'}},
+     fixas:{
+       'Realiza sozinho': '#D0E5F5',
+       'Apoio em Fiscalização': '#72B3E8',
+       'Apoio em Educação': '#3F8FD2',
+       'Apoio completo': '#005CA8',
+       'Sem adesão ao SNT': '#004077'
+     }},
     {grupo:'Apoio para campanha', id:'snt',   nome:'Adesão ao SNT',        campo:'snt',        titulo:'Adesão ao SNT',
      cor:'#005CA8', rot:ROT_SIMNAO},
     {grupo:'Apoio para campanha', id:'acoes', nome:'Ações de fiscalização', campo:'acoes',      titulo:'Ações de fiscalização',
@@ -293,9 +306,24 @@ function(el, x, data) {
 
   // Valor (texto) de um município em um tema
   function valorDe(p, t) {
+    if (t.id === 'nivel') {
+      var v = p[t.campo];
+      if (t.fixas && t.fixas[v]) return v;
+      var nv = Math.round(+v);
+      if (nv === 1) return 'Realiza sozinho';
+      if (nv === 2) {
+        var ac = norm(p.acoes);
+        if (ac === 'sim') return 'Apoio em Fiscalização';
+        return 'Apoio em Educação';
+      }
+      if (nv === 3) return 'Apoio completo';
+      if (nv === 4) return 'Sem adesão ao SNT';
+      return SEM_INFO;
+    }
     var v = p[t.campo];
     if (t.grad) return (v === null || v === undefined || v === '' || isNaN(+v)) ? SEM_INFO : +v;
     if (t.fixas) {                                   // nível discreto: '1', '2', ...
+      if (t.fixas[v]) return v;
       var nv = Math.round(+v);
       return (v === null || v === undefined || v === '' || isNaN(nv) || nv < 1) ? SEM_INFO : String(nv);
     }
@@ -469,6 +497,7 @@ function(el, x, data) {
   // ------------------------------------------------------------------
   var TEMA = TEMAS[0];
   var sel = null;            // nome da superintendência selecionada
+  var filtrosLegenda = new Set();  // categorias/valores filtrados na legenda
   var munLayer = null, destaqueLayer = null;
 
   map.createPane('mdnSuper');    map.getPane('mdnSuper').style.zIndex = 410;
@@ -518,12 +547,64 @@ function(el, x, data) {
     '.mdn-temas input{accent-color:#004077;margin:0;}' +
     '.mdn-leg{max-width:360px;max-height:55vh;overflow:auto;font-size:15px;}' +
     '.mdn-leg .mdn-tit{font-size:16px;}' +
-    '.mdn-it{display:flex;align-items:center;gap:7px;margin:3px 0;}' +
+    '.mdn-it{display:flex;align-items:center;gap:7px;margin:2px 0;padding:3px 6px;border-radius:4px;' +
+      'cursor:pointer;user-select:none;transition:all .15s ease;}' +
+    '.mdn-it:hover{background:rgba(0,64,119,.08);}' +
+    '.mdn-it.ativo{background:rgba(0,64,119,.12);outline:1.5px solid #004077;color:#004077;font-weight:700;}' +
+    '.mdn-it.inativo{opacity:0.38;}' +
+    '.mdn-it-check{margin-left:auto;font-weight:bold;font-size:13px;color:#004077;}' +
+    '.mdn-leg-limpar{margin-top:6px;padding-top:4px;border-top:1px solid #E0E0E0;display:flex;justify-content:space-between;align-items:center;}' +
     '.mdn-sw{width:18px;height:18px;flex:none;border-radius:3px;border:1px solid rgba(0,0,0,.2);}' +
     '.mdn-sw.hach{background:repeating-linear-gradient(45deg,' + COR.semAdesao + ' 0 3px,#fff 3px 5px);}' +
-    '.mdn-btn{cursor:pointer;font-weight:600;color:#004077;border:0;background:transparent;padding:0;font-size:13px;}' +
-    '.mdn-btn:hover{text-decoration:underline;}' +
-    '.leaflet-tooltip.mdn-tip{font-weight:700;font-size:12px;padding:6px 10px;}';
+    '.mdn-btn{cursor:pointer;font-weight:600;color:#004077;border:0;background:transparent;padding:2px 4px;font-size:12px;border-radius:3px;}' +
+    '.mdn-btn:hover{text-decoration:underline;background:rgba(0,64,119,.06);}' +
+    '.leaflet-tooltip.mdn-tip{font-weight:700;font-size:12px;padding:6px 10px;}' +
+    /* Painel de Priorização */
+    '.mdn-painel-priorizacao{position:absolute;top:10px;right:10px;width:390px;max-width:calc(100vw - 20px);' +
+      'height:calc(100vh - 85px);max-height:820px;z-index:1000;background:rgba(255,255,255,.98);border-radius:8px;' +
+      'box-shadow:0 4px 24px rgba(0,0,0,.25);display:flex;flex-direction:column;font-family:"Open Sans",sans-serif;' +
+      'color:#191C1D;transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .2s ease;overflow:hidden;}' +
+    '.mdn-painel-priorizacao.recolhido{transform:translateX(calc(100% + 25px));opacity:0;pointer-events:none;}' +
+    '.mdn-prio-hdr{padding:11px 13px;background:#004077;color:#fff;display:flex;justify-content:space-between;' +
+      'align-items:flex-start;flex:none;}' +
+    '.mdn-prio-tit-box{display:flex;flex-direction:column;gap:2px;}' +
+    '.mdn-prio-tit{font-size:14px;font-weight:700;line-height:1.2;}' +
+    '.mdn-prio-sub{font-size:11.5px;opacity:.9;}' +
+    '.mdn-prio-fechar{background:transparent;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 5px;' +
+      'line-height:1;border-radius:3px;opacity:.85;}' +
+    '.mdn-prio-fechar:hover{opacity:1;background:rgba(255,255,255,.15);}' +
+    '.mdn-prio-controles{padding:8px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;display:flex;' +
+      'flex-direction:column;gap:6px;flex:none;}' +
+    '.mdn-prio-busca{width:100%;padding:5px 9px;border-radius:5px;border:1px solid #CBD5E1;font-size:12px;' +
+      'outline:none;font-family:inherit;box-sizing:border-box;}' +
+    '.mdn-prio-busca:focus{border-color:#004077;box-shadow:0 0 0 1px #004077;}' +
+    '.mdn-prio-select-row{display:flex;gap:6px;}' +
+    '.mdn-prio-select{flex:1;padding:4px 6px;border-radius:5px;border:1px solid #CBD5E1;font-size:11px;' +
+      'font-family:inherit;background:#fff;outline:none;cursor:pointer;min-width:0;}' +
+    '.mdn-prio-select:focus{border-color:#004077;}' +
+    '.mdn-prio-lista{overflow-y:auto;flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:6px;}' +
+    '.mdn-card-mun{padding:8px 10px;border-radius:6px;border:1px solid #E2E8F0;background:#fff;cursor:pointer;' +
+      'transition:all .15s ease;display:flex;flex-direction:column;gap:4px;}' +
+    '.mdn-card-mun:hover{border-color:#004077;box-shadow:0 2px 8px rgba(0,64,119,.12);transform:translateY(-1px);}' +
+    '.mdn-card-mun.selecionado{border-color:#004077;background:#F0F7FD;box-shadow:0 0 0 1px #004077;}' +
+    '.mdn-card-top{display:flex;align-items:center;justify-content:space-between;gap:6px;}' +
+    '.mdn-card-nome-box{display:flex;align-items:center;gap:6px;overflow:hidden;}' +
+    '.mdn-card-pos{font-size:11px;font-weight:700;color:#64748B;flex:none;min-width:18px;}' +
+    '.mdn-card-nome{font-size:13px;font-weight:700;color:#004077;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+    '.mdn-badge-nivel{font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;white-space:nowrap;flex:none;}' +
+    '.mdn-card-stats{display:flex;gap:6px;}' +
+    '.mdn-stat-pill{flex:1;background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:10.5px;display:flex;' +
+      'justify-content:space-between;align-items:center;}' +
+    '.mdn-stat-lbl{color:#64748B;}' +
+    '.mdn-stat-val{font-weight:700;color:#0F172A;}' +
+    '.mdn-card-orgaos{display:flex;flex-wrap:wrap;gap:4px;padding-top:2px;border-top:1px dashed #E2E8F0;}' +
+    '.mdn-tag-orgao{font-size:9.5px;background:#F8FAFC;border:1px solid #CBD5E1;color:#334155;padding:1px 4px;border-radius:3px;white-space:nowrap;}' +
+    '.mdn-tag-rodovia{font-size:9px;background:#EDE9FE;border:1px solid #C4B5FD;color:#5B21B6;font-weight:700;padding:1px 4px;border-radius:3px;}' +
+    '.mdn-prio-vazio{text-align:center;padding:25px 15px;color:#64748B;font-size:12.5px;line-height:1.4;}' +
+    '.mdn-btn-toggle-prio{background:#004077;color:#fff;font-weight:700;font-size:12px;padding:6px 10px;' +
+      'border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.35);border:0;cursor:pointer;display:flex;align-items:center;' +
+      'gap:5px;transition:background .15s;}' +
+    '.mdn-btn-toggle-prio:hover{background:#005CA8;}';
   document.head.appendChild(css);
 
   // ------------------------------------------------------------------
@@ -567,15 +648,79 @@ function(el, x, data) {
     if (semAdesao(p)) s.fillColor = 'url(#' + PAT_ID + ')';
     else if (TEMA.grad) s.fillColor = corGrad(TEMA, valorDe(p, TEMA), p.super);
     else s.fillColor = TEMA.cores[valorDe(p, TEMA)] || COR.semInfo;
+
+    if (filtrosLegenda.size > 0) {
+      var match = false;
+      if (semAdesao(p)) {
+        match = filtrosLegenda.has('__SEM_ADESAO__');
+      } else {
+        var v = valorDe(p, TEMA);
+        if (TEMA.grad) {
+          match = (v !== SEM_INFO && filtrosLegenda.has(String(classeDe(TEMA.cls[p.super], v))));
+        } else {
+          match = filtrosLegenda.has(String(v));
+        }
+      }
+      if (match) {
+        s.weight = 2;
+        s.color = '#FFFFFF';
+        s.fillOpacity = 1;
+      } else {
+        s.fillOpacity = 0.1;
+        s.opacity = 0.25;
+        s.color = '#B0B0B0';
+        s.weight = 0.5;
+      }
+    }
+
     return s;
   }
 
+  function aplicarFiltro(chave) {
+    if (chave === null) {
+      filtrosLegenda.clear();
+    } else {
+      if (filtrosLegenda.has(chave)) {
+        filtrosLegenda.delete(chave);
+      } else {
+        filtrosLegenda.add(chave);
+      }
+    }
+    if (munLayer) {
+      munLayer.setStyle(estiloMun);
+      if (filtrosLegenda.size > 0) {
+        munLayer.eachLayer(function(layer) {
+          var p = layer.feature.properties;
+          var match = false;
+          if (semAdesao(p)) {
+            match = filtrosLegenda.has('__SEM_ADESAO__');
+          } else {
+            var v = valorDe(p, TEMA);
+            if (TEMA.grad) {
+              match = (v !== SEM_INFO && filtrosLegenda.has(String(classeDe(TEMA.cls[p.super], v))));
+            } else {
+              match = filtrosLegenda.has(String(v));
+            }
+          }
+          if (match) layer.bringToFront();
+        });
+      }
+    }
+    atualizarLegenda();
+    if (typeof atualizarListaCards === 'function') atualizarListaCards();
+  }
+
   function htmlPopup(p) {
+    var isSem = semAdesao(p);
+    var nivelTxt = isSem ? 'Sem adesão ao SISTRAN' : valorDe(p, TEMAS[0]);
     var h = '<b>Município:</b> ' + esc(p.nome) +
-            '<br><b>Superintendência:</b> ' + esc(p.super) + '<br><br>';
-    if (semAdesao(p)) return h + 'Sem adesão ao SISTRAN';
+            '<br><b>Superintendência:</b> ' + esc(p.super) +
+            '<br><b>Nível de apoio:</b> ' + esc(nivelTxt);
+    if (isSem) return h;
+    h += '<br><br>';
     var out = '', grupo = null;
     TEMAS.forEach(function(t) {
+      if (t.id === 'nivel') return;
       var v = valorDe(p, t), txt;
       if (v === SEM_INFO) txt = SEM_INFO;
       else if (t.grad)    txt = fmtNum(t, v);
@@ -609,6 +754,9 @@ function(el, x, data) {
           layer.bringToFront();
         });
         layer.on('mouseout', function() { munLayer.resetStyle(layer); });
+        layer.on('click', function() {
+          if (typeof destacarCardMunicipio === 'function') destacarCardMunicipio(f.properties.nome);
+        });
       }
     }).addTo(map);
   }
@@ -618,6 +766,10 @@ function(el, x, data) {
   // ------------------------------------------------------------------
   function selecionar(nome) {
     sel = nome;
+    filtrosLegenda.clear();
+    buscaTexto = '';
+    filtroOrgao = 'todos';
+    munSelecionadoCard = null;
     map.closePopup();
     superLayer.setStyle(estiloSuper);
     mostrarMunicipios(nome);
@@ -634,10 +786,18 @@ function(el, x, data) {
     map.fitBounds(destaqueLayer.getBounds(), {padding: [30, 30]});
     btnDiv.style.display = '';
     atualizarLegenda();
+    if (typeof atualizarListaPriorizacao === 'function') {
+      atualizarListaPriorizacao();
+      alternarPainelPriorizacao(true);
+    }
   }
 
   function voltar() {
     sel = null;
+    filtrosLegenda.clear();
+    buscaTexto = '';
+    filtroOrgao = 'todos';
+    munSelecionadoCard = null;
     map.closePopup();
     if (munLayer)      { map.removeLayer(munLayer);      munLayer = null; }
     if (destaqueLayer) { map.removeLayer(destaqueLayer); destaqueLayer = null; }
@@ -645,12 +805,20 @@ function(el, x, data) {
     map.fitBounds(limitesEstado);
     btnDiv.style.display = 'none';
     atualizarLegenda();
+    if (typeof atualizarListaPriorizacao === 'function') {
+      atualizarListaPriorizacao();
+      alternarPainelPriorizacao(false);
+    }
   }
 
   function setTema(id) {
     TEMA = TEMAS.filter(function(t) { return t.id === id; })[0];
+    filtrosLegenda.clear();
     if (munLayer) munLayer.setStyle(estiloMun);
     atualizarLegenda();
+    if (typeof atualizarListaCards === 'function') {
+      atualizarListaCards();
+    }
   }
 
   map.on('click', function() { if (sel !== null) voltar(); });
@@ -696,6 +864,19 @@ function(el, x, data) {
     legDiv = L.DomUtil.create('div', 'mdn-ctrl mdn-leg');
     L.DomEvent.disableClickPropagation(legDiv);
     L.DomEvent.disableScrollPropagation(legDiv);
+    legDiv.addEventListener('click', function(e) {
+      var limpar = e.target.closest('.mdn-btn-limpar');
+      if (limpar) {
+        aplicarFiltro(null);
+        return;
+      }
+      var it = e.target.closest('.mdn-it');
+      if (!it) return;
+      var chave = it.getAttribute('data-chave');
+      if (chave !== null && chave !== undefined) {
+        aplicarFiltro(chave);
+      }
+    });
     return legDiv;
   };
   ctrlLeg.addTo(map);
@@ -723,32 +904,438 @@ function(el, x, data) {
     }
     if (TEMA.fixas) vals = Object.keys(TEMA.fixas);     // mostra todos os níveis, mesmo com 0 município
     vals.sort(function(a, b) {
+      if (TEMA.fixas) {
+        var ordemFixa = Object.keys(TEMA.fixas);
+        var iA = ordemFixa.indexOf(a), iB = ordemFixa.indexOf(b);
+        if (iA !== -1 && iB !== -1) return iA - iB;
+      }
       if (TEMA.binario) return (norm(a) === 'sim' ? 0 : 1) - (norm(b) === 'sim' ? 0 : 1);
       return a.localeCompare(b, 'pt-BR');
     });
     if (cont[SEM_INFO]) vals.push(SEM_INFO);
 
-    function item(sw, txt, n) {
-      return '<div class="mdn-it">' + sw + '<span>' + esc(txt) + ' (' + n + ')</span></div>';
+    function item(sw, txt, n, chave) {
+      var ativo = filtrosLegenda.has(chave);
+      var inativo = (filtrosLegenda.size > 0 && !ativo);
+      var cls = 'mdn-it' + (ativo ? ' ativo' : '') + (inativo ? ' inativo' : '');
+      var title = ativo ? 'Clique para desmarcar' : 'Clique para adicionar à seleção';
+      return '<div class="' + cls + '" data-chave="' + esc(chave) + '" title="' + title + '">' +
+             sw + '<span>' + esc(txt) + ' (' + n + ')</span>' +
+             (ativo ? '<span class="mdn-it-check">&check;</span>' : '') +
+             '</div>';
     }
     var h = '<div class="mdn-tit">' + esc(sel) + '</div>' +
             '<div class="mdn-sub">' + esc(TEMA.titulo) + (TEMA.desc ? ' &ndash; ' + esc(TEMA.desc) : '') +
             (TEMA.grad ? ' &ndash; classes definidas dentro da superintendência' : '') + '</div>';
     vals.forEach(function(v) {
       if (TEMA.grad && v === SEM_INFO) {
-        h += item('<span class="mdn-sw" style="background:' + COR.semInfo + ';"></span>', SEM_INFO, cont[v]);
+        h += item('<span class="mdn-sw" style="background:' + COR.semInfo + ';"></span>', SEM_INFO, cont[v] || 0, SEM_INFO);
       } else if (TEMA.grad) {
         h += item('<span class="mdn-sw" style="background:' + cl.cores[+v] + ';"></span>',
-                  rotuloClasse(TEMA, cl, +v), cont[v] || 0);
+                  rotuloClasse(TEMA, cl, +v), cont[v] || 0, String(v));
       } else {
-        h += item('<span class="mdn-sw" style="background:' + TEMA.cores[v] + ';"></span>',
-                  TEMA.binario ? rotuloValor(TEMA, v) : (TEMA.fixas && v !== SEM_INFO ? 'Nível ' + v : v), cont[v] || 0);
+        h += item('<span class="mdn-sw" style="background:' + (TEMA.cores[v] || COR.semInfo) + ';"></span>',
+                  TEMA.binario ? rotuloValor(TEMA, v) : v, cont[v] || 0, String(v));
       }
     });
-    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Sem adesão ao SISTRAN', nSem);
+    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Sem adesão ao SISTRAN', nSem, '__SEM_ADESAO__');
+
+    if (filtrosLegenda.size > 0) {
+      h += '<div class="mdn-leg-limpar">' +
+           '<span style="font-size:11.5px;color:#555;">' + filtrosLegenda.size + ' selecionada(s)</span>' +
+           '<button type="button" class="mdn-btn mdn-btn-limpar">&times; Limpar seleção</button>' +
+           '</div>';
+    }
+
     legDiv.innerHTML = h;
   }
   atualizarLegenda();
+
+  // ------------------------------------------------------------------
+  // Painel de Priorização de Municípios
+  // ------------------------------------------------------------------
+  var painelAberto = false;
+  var ordenacaoAtual = 'score';
+  var buscaTexto = '';
+  var filtroOrgao = 'todos';
+  var munSelecionadoCard = null;
+
+  function deveIgnorar(p) {
+    // Ignora municípios sem adesão ao SNT
+    if (norm(p.snt) === 'nao') return true;
+    var nv = valorDe(p, TEMAS[0]);
+    if (nv === 'Sem adesão ao SNT') return true;
+
+    // Ignora municípios que realizam sozinho
+    if (nv === 'Realiza sozinho') return true;
+    if (norm(p.acoes) === 'sim' && norm(p.abordagens) === 'sim') return true;
+
+    return false;
+  }
+
+  function rankingNivel(p) {
+    var nv = norm(valorDe(p, TEMAS[0]));
+    if (nv.indexOf('apoio completo') !== -1) return 1;
+    if (nv.indexOf('educacao') !== -1) return 2;
+    if (nv.indexOf('fiscalizacao') !== -1) return 3;
+    return 4;
+  }
+
+  function compararPrioridade(a, b) {
+    var pa = a.properties, pb = b.properties;
+
+    // 1º Nível: Apoio Completo -> Apoio em Educação -> Apoio em Fiscalização
+    var rA = rankingNivel(pa), rB = rankingNivel(pb);
+    if (rA !== rB) return rA - rB;
+
+    // 2º Maior % de óbitos de motociclistas
+    var obA = (pa.prop_obitos !== null && !isNaN(+pa.prop_obitos)) ? +pa.prop_obitos : 0;
+    var obB = (pb.prop_obitos !== null && !isNaN(+pb.prop_obitos)) ? +pb.prop_obitos : 0;
+    if (Math.abs(obB - obA) > 0.0001) return obB - obA;
+
+    // 3º Maior % de sinistros de motociclistas
+    var sinA = (pa.prop_sinistros !== null && !isNaN(+pa.prop_sinistros)) ? +pa.prop_sinistros : 0;
+    var sinB = (pb.prop_sinistros !== null && !isNaN(+pb.prop_sinistros)) ? +pb.prop_sinistros : 0;
+    if (Math.abs(sinB - sinA) > 0.0001) return sinB - sinA;
+
+    return pa.nome.localeCompare(pb.nome, 'pt-BR');
+  }
+
+  function calcularScore(p) {
+    var r = rankingNivel(p);
+    var base = (4 - r) * 10;
+    var ob = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? +p.prop_obitos : 0;
+    var sin = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? +p.prop_sinistros : 0;
+    return base + (ob * 0.6) + (sin * 0.4);
+  }
+
+  function estiloBadgeNivel(nivelTxt, isSemAdesao) {
+    if (isSemAdesao) {
+      return 'background:#6E6E6E;color:#FFFFFF;';
+    }
+    var n = norm(nivelTxt);
+    if (n.indexOf('sozinho') !== -1) return 'background:#D0E5F5;color:#004077;border:1px solid #A4CFED;';
+    if (n.indexOf('fiscalizacao') !== -1) return 'background:#72B3E8;color:#002F59;';
+    if (n.indexOf('educacao') !== -1) return 'background:#3F8FD2;color:#FFFFFF;';
+    if (n.indexOf('completo') !== -1) return 'background:#005CA8;color:#FFFFFF;';
+    if (n.indexOf('snt') !== -1) return 'background:#004077;color:#FFFFFF;';
+    return 'background:#C4C4C4;color:#333333;';
+  }
+
+  var painelDiv = L.DomUtil.create('div', 'mdn-painel-priorizacao recolhido', map.getContainer());
+  L.DomEvent.disableClickPropagation(painelDiv);
+  L.DomEvent.disableScrollPropagation(painelDiv);
+
+  function alternarPainelPriorizacao(abrir) {
+    if (abrir === undefined) {
+      painelAberto = !painelAberto;
+    } else {
+      painelAberto = !!abrir;
+    }
+    if (painelAberto) {
+      painelDiv.classList.remove('recolhido');
+      atualizarListaPriorizacao();
+    } else {
+      painelDiv.classList.add('recolhido');
+    }
+    atualizarBotaoPriorizacao();
+  }
+
+  var btnPrioDiv;
+  var ctrlPrio = L.control({position: 'topright'});
+  ctrlPrio.onAdd = function() {
+    btnPrioDiv = L.DomUtil.create('div', '');
+    btnPrioDiv.innerHTML = '<button type="button" class="mdn-btn-toggle-prio">📋 Priorização</button>';
+    L.DomEvent.disableClickPropagation(btnPrioDiv);
+    btnPrioDiv.querySelector('button').addEventListener('click', function() {
+      alternarPainelPriorizacao();
+    });
+    return btnPrioDiv;
+  };
+  ctrlPrio.addTo(map);
+
+  function atualizarBotaoPriorizacao() {
+    if (!btnPrioDiv) return;
+    var btn = btnPrioDiv.querySelector('button');
+    if (!btn) return;
+    var count = 0;
+    if (sel !== null) {
+      count = MUN.features.filter(function(f) {
+        return f.properties.super === sel && !deveIgnorar(f.properties);
+      }).length;
+      btn.innerHTML = '📋 Priorização (' + count + ')';
+    } else {
+      var countTotal = MUN.features.filter(function(f) {
+        return !deveIgnorar(f.properties);
+      }).length;
+      btn.innerHTML = '📋 Priorização (' + countTotal + ')';
+    }
+  }
+
+  function criarEstruturaPainel() {
+    painelDiv.innerHTML =
+      '<div class="mdn-prio-hdr">' +
+        '<div class="mdn-prio-tit-box">' +
+          '<div class="mdn-prio-tit" id="mdn-prio-tit">Priorização de Municípios</div>' +
+          '<div class="mdn-prio-sub" id="mdn-prio-sub">Selecione uma superintendência</div>' +
+        '</div>' +
+        '<button type="button" class="mdn-prio-fechar" title="Fechar painel">&times;</button>' +
+      '</div>' +
+      '<div class="mdn-prio-controles">' +
+        '<input type="text" class="mdn-prio-busca" placeholder="🔍 Buscar município por nome...">' +
+        '<div class="mdn-prio-select-row">' +
+          '<select class="mdn-prio-select" id="mdn-prio-ordem" title="Ordenar por">' +
+            '<option value="score">Prioridade da Campanha</option>' +
+            '<option value="obitos">Maior % Óbitos</option>' +
+            '<option value="sinistros">Maior % Sinistros</option>' +
+            '<option value="nome">Nome (A-Z)</option>' +
+          '</select>' +
+          '<select class="mdn-prio-select" id="mdn-prio-orgao" title="Filtrar por órgão">' +
+            '<option value="todos">Todos os órgãos</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mdn-prio-lista" id="mdn-prio-lista"></div>';
+
+    painelDiv.querySelector('.mdn-prio-fechar').addEventListener('click', function() {
+      alternarPainelPriorizacao(false);
+    });
+
+    var buscaInput = painelDiv.querySelector('.mdn-prio-busca');
+    buscaInput.addEventListener('input', function(e) {
+      buscaTexto = norm(e.target.value);
+      atualizarListaCards();
+    });
+
+    var selectOrdem = painelDiv.querySelector('#mdn-prio-ordem');
+    selectOrdem.addEventListener('change', function(e) {
+      ordenacaoAtual = e.target.value;
+      atualizarListaCards();
+    });
+
+    var selectOrgao = painelDiv.querySelector('#mdn-prio-orgao');
+    selectOrgao.addEventListener('change', function(e) {
+      filtroOrgao = e.target.value;
+      atualizarListaCards();
+    });
+  }
+  criarEstruturaPainel();
+
+  function focarMunicipio(nome) {
+    if (!munLayer && sel === null) {
+      var feat = MUN.features.find(function(f) { return f.properties.nome === nome; });
+      if (feat && feat.properties.super) {
+        selecionar(feat.properties.super);
+        setTimeout(function() {
+          focarMunicipio(nome);
+        }, 350);
+      }
+      return;
+    }
+    if (!munLayer) return;
+    munLayer.eachLayer(function(l) {
+      if (l.feature.properties.nome === nome) {
+        map.fitBounds(l.getBounds(), {padding: [60, 60], maxZoom: 13});
+        l.openPopup();
+        destacarCardMunicipio(nome);
+      }
+    });
+  }
+
+  function destacarCardMunicipio(nome) {
+    munSelecionadoCard = nome;
+    var cards = painelDiv.querySelectorAll('.mdn-card-mun');
+    cards.forEach(function(c) {
+      if (c.getAttribute('data-nome') === nome) {
+        c.classList.add('selecionado');
+        c.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+      } else {
+        c.classList.remove('selecionado');
+      }
+    });
+  }
+
+  function atualizarListaPriorizacao() {
+    var titEl = painelDiv.querySelector('#mdn-prio-tit');
+    var subEl = painelDiv.querySelector('#mdn-prio-sub');
+    var orgaoSel = painelDiv.querySelector('#mdn-prio-orgao');
+
+    if (sel === null) {
+      titEl.textContent = 'Priorização: Estado de SP';
+      subEl.textContent = 'Top municípios prioritários do Estado';
+    } else {
+      titEl.textContent = 'Priorização: ' + sel;
+      subEl.textContent = 'Superintendência do Detran-SP';
+    }
+
+    var featsBase = MUN.features.filter(function(f) {
+      if (deveIgnorar(f.properties)) return false;
+      return sel === null || f.properties.super === sel;
+    });
+
+    var orgaosSet = {};
+    featsBase.forEach(function(f) {
+      var p = f.properties;
+      if (p.der) orgaosSet['DER: ' + p.der] = 'der:' + p.der;
+      if (p.saude) orgaosSet['SES: ' + p.saude] = 'saude:' + p.saude;
+      if (p.pm) orgaosSet['PM: ' + p.pm] = 'pm:' + p.pm;
+      if (+p.artesp === 1) orgaosSet['Rodovia: ARTESP'] = 'rod:artesp';
+      if (+p.antt === 1) orgaosSet['Rodovia: ANTT'] = 'rod:antt';
+      if (+p.prf === 1) orgaosSet['Rodovia: PRF/DNIT'] = 'rod:prf';
+    });
+
+    var optHtml = '<option value="todos">Todos os órgãos</option>';
+    Object.keys(orgaosSet).sort().forEach(function(lbl) {
+      var val = orgaosSet[lbl];
+      optHtml += '<option value="' + esc(val) + '"' + (filtroOrgao === val ? ' selected' : '') + '>' + esc(lbl) + '</option>';
+    });
+    orgaoSel.innerHTML = optHtml;
+
+    atualizarListaCards();
+    atualizarBotaoPriorizacao();
+  }
+
+  function atualizarListaCards() {
+    var listaEl = painelDiv.querySelector('#mdn-prio-lista');
+    var subEl = painelDiv.querySelector('#mdn-prio-sub');
+
+    var feats = MUN.features.filter(function(f) {
+      var p = f.properties;
+      if (deveIgnorar(p)) return false;
+      if (sel !== null && p.super !== sel) return false;
+
+      if (buscaTexto && norm(p.nome).indexOf(buscaTexto) === -1) return false;
+
+      if (filtrosLegenda && filtrosLegenda.size > 0) {
+        var match = false;
+        if (semAdesao(p)) {
+          match = filtrosLegenda.has('__SEM_ADESAO__');
+        } else {
+          var v = valorDe(p, TEMA);
+          if (TEMA.grad) {
+            match = (v !== SEM_INFO && filtrosLegenda.has(String(classeDe(TEMA.cls[p.super], v))));
+          } else {
+            match = filtrosLegenda.has(String(v));
+          }
+        }
+        if (!match) return false;
+      }
+
+      if (filtroOrgao !== 'todos') {
+        var partes = filtroOrgao.split(':');
+        var tipo = partes[0], valor = partes[1];
+        if (tipo === 'der' && p.der !== valor) return false;
+        if (tipo === 'saude' && p.saude !== valor) return false;
+        if (tipo === 'pm' && p.pm !== valor) return false;
+        if (tipo === 'rod' && +p[valor] !== 1) return false;
+      }
+
+      return true;
+    });
+
+    feats.sort(function(a, b) {
+      var pa = a.properties, pb = b.properties;
+      if (ordenacaoAtual === 'obitos') {
+        return (+pb.prop_obitos || 0) - (+pa.prop_obitos || 0);
+      }
+      if (ordenacaoAtual === 'sinistros') {
+        return (+pb.prop_sinistros || 0) - (+pa.prop_sinistros || 0);
+      }
+      if (ordenacaoAtual === 'nome') {
+        return pa.nome.localeCompare(pb.nome, 'pt-BR');
+      }
+      return compararPrioridade(a, b);
+    });
+
+    var totalEncontrados = feats.length;
+    if (sel === null && feats.length > 30) {
+      feats = feats.slice(0, 30);
+    }
+
+    subEl.textContent = (sel === null && totalEncontrados > 30 ? 'Top 30 de ' + totalEncontrados : feats.length) +
+                        ' município(s) com demanda de apoio' + (sel ? ' em ' + sel : ' no Estado');
+
+    if (feats.length === 0) {
+      listaEl.innerHTML = '<div class="mdn-prio-vazio">Nenhum município encontrado com os filtros atuais.</div>';
+      return;
+    }
+
+    var cardsHtml = '';
+    feats.forEach(function(f, idx) {
+      var p = f.properties;
+      var isSem = semAdesao(p);
+      var nivelTxt = isSem ? 'Sem adesão ao SISTRAN' : valorDe(p, TEMAS[0]);
+      var badgeStyle = estiloBadgeNivel(nivelTxt, isSem);
+
+      var obVal = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? (+p.prop_obitos).toFixed(1) + '%' : '0.0%';
+      var sinVal = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? (+p.prop_sinistros).toFixed(1) + '%' : '0.0%';
+
+      var orgaosHtml = '';
+      if (p.der)   orgaosHtml += '<span class="mdn-tag-orgao" title="' + esc(p.pf_der ? 'Ponto focal: ' + p.pf_der : 'Ponto focal DER') + '">DER: ' + esc(p.der) + '</span>';
+      if (p.saude) orgaosHtml += '<span class="mdn-tag-orgao" title="' + esc(p.pf_drs ? 'Ponto focal: ' + p.pf_drs : 'Ponto focal DRS') + '">SES: ' + esc(p.saude.replace(/^DRS\s+[IVXLCDM]+\s*-\s*/, '')) + '</span>';
+      if (p.pm)    orgaosHtml += '<span class="mdn-tag-orgao" title="' + esc(p.pf_pm ? 'Ponto focal: ' + p.pf_pm : 'Ponto focal PM') + '">PM: ' + esc(p.pm.replace(/^CPI-\d+\s*/, '')) + '</span>';
+      if (+p.artesp === 1) orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia estadual concedida">ARTESP</span>';
+      if (+p.antt === 1)   orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia federal concedida">ANTT</span>';
+      if (+p.prf === 1)    orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia federal (PRF/DNIT)">PRF</span>';
+
+      var isSel = (munSelecionadoCard === p.nome);
+
+      cardsHtml +=
+        '<div class="mdn-card-mun' + (isSel ? ' selecionado' : '') + '" data-nome="' + esc(p.nome) + '" title="Clique para focar no mapa">' +
+          '<div class="mdn-card-top">' +
+            '<div class="mdn-card-nome-box">' +
+              '<span class="mdn-card-pos">#' + (idx + 1) + '</span>' +
+              '<span class="mdn-card-nome">' + esc(p.nome) + '</span>' +
+            '</div>' +
+            '<span class="mdn-badge-nivel" style="' + badgeStyle + '">' + esc(nivelTxt) + '</span>' +
+          '</div>' +
+          '<div class="mdn-card-stats">' +
+            '<div class="mdn-stat-pill">' +
+              '<span class="mdn-stat-lbl">Óbitos Motos:</span>' +
+              '<span class="mdn-stat-val">' + obVal + '</span>' +
+            '</div>' +
+            '<div class="mdn-stat-pill">' +
+              '<span class="mdn-stat-lbl">Sinistros:</span>' +
+              '<span class="mdn-stat-val">' + sinVal + '</span>' +
+            '</div>' +
+          '</div>' +
+          (orgaosHtml ? '<div class="mdn-card-orgaos">' + orgaosHtml + '</div>' : '') +
+        '</div>';
+    });
+
+    listaEl.innerHTML = cardsHtml;
+
+    listaEl.querySelectorAll('.mdn-card-mun').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var nome = card.getAttribute('data-nome');
+        if (nome) focarMunicipio(nome);
+      });
+    });
+  }
+
+  atualizarListaPriorizacao();
+  atualizarBotaoPriorizacao();
+
+  window.selecionarSuperintendencia = function(nomeSuper, nomeMun) {
+    if (nomeSuper) {
+      selecionar(nomeSuper);
+      if (nomeMun) {
+        setTimeout(function() {
+          if (munLayer) {
+            munLayer.eachLayer(function(l) {
+              if (l.feature && l.feature.properties && l.feature.properties.nome === nomeMun) {
+                map.fitBounds(l.getBounds(), {padding: [50, 50], maxZoom: 12});
+                l.openPopup();
+                if (typeof destacarCardMunicipio === 'function') {
+                  destacarCardMunicipio(nomeMun);
+                }
+              }
+            });
+          }
+        }, 300);
+      }
+    }
+  };
 }
 )---"
 ```
@@ -759,7 +1346,7 @@ function(el, x, data) {
 bb <- st_bbox(super_js)
 ```
 
-# Campanha Motociclistas 2026
+# Mapa Dinâmico {icon="geo-alt-fill"}
 ```{r}
 #| label: Mapa
 
@@ -769,4 +1356,694 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
             lng2 = bb[["xmax"]], lat2 = bb[["ymax"]]) |>
   onRender(js, data = list(super = para_geojson(super_js),
                            mun   = para_geojson(mun_js)))
+```
+
+# Tabela de Dados {icon="table"}
+
+```{r}
+#| label: Tabela
+#| echo: false
+#| results: asis
+
+cat('
+<div id="tabela-dados" class="tb-container">
+  <div class="tb-card">
+    <!-- Cabeçalho com Título, Subtítulo e Botões de Ação -->
+    <div class="tb-header">
+      <div class="tb-title-bar">
+        <div class="tb-title-group">
+          <h2><i class="bi bi-table"></i> Tabela Geral de Municípios</h2>
+          <p>Consulte, filtre e exporte os dados dos 645 municípios paulistas da Campanha Motociclistas 2026</p>
+        </div>
+        <div class="tb-btn-group">
+          <button type="button" id="btn-exportar-csv" class="tb-btn-csv" title="Exportar dados filtrados em formato CSV">
+            <i class="bi bi-file-earmark-spreadsheet-fill"></i> Exportar CSV
+          </button>
+          <button type="button" id="btn-limpar-filtros" class="tb-btn-clear" title="Limpar todos os filtros aplicados">
+            <i class="bi bi-arrow-counterclockwise"></i> Limpar Filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros em Grid Organizada -->
+      <div class="tb-filters-wrapper">
+        <div class="tb-filters-grid">
+          <div class="tb-field">
+            <label class="tb-label" for="filtro-busca">Pesquisar Município ou Regional</label>
+            <input type="text" id="filtro-busca" class="tb-input" placeholder="Digite para buscar...">
+          </div>
+          <div class="tb-field">
+            <label class="tb-label" for="filtro-super">Superintendência</label>
+            <select id="filtro-super" class="tb-select">
+              <option value="">Todas as Superintendências</option>
+            </select>
+          </div>
+          <div class="tb-field">
+            <label class="tb-label" for="filtro-nivel">Nível de Apoio</label>
+            <select id="filtro-nivel" class="tb-select">
+              <option value="">Todos os Níveis de Apoio</option>
+              <option value="Apoio completo">Apoio completo</option>
+              <option value="Apoio em Educação">Apoio em Educação</option>
+              <option value="Apoio em Fiscalização">Apoio em Fiscalização</option>
+              <option value="Realiza sozinho">Realiza sozinho</option>
+              <option value="Sem adesão ao SNT">Sem adesão ao SNT</option>
+              <option value="Sem adesão ao SISTRAN">Sem adesão ao SISTRAN</option>
+            </select>
+          </div>
+          <div class="tb-field">
+            <label class="tb-label" for="filtro-snt">Adesão ao SNT</label>
+            <select id="filtro-snt" class="tb-select">
+              <option value="">Todos</option>
+              <option value="SIM">Sim (Aderido)</option>
+              <option value="NÃO">Não (Sem adesão)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Status e Contagem -->
+    <div class="tb-status-bar">
+      <div id="contador-tabela" class="tb-status-left">
+        Exibindo 645 de 645 municípios
+      </div>
+      <div class="tb-status-right">
+        <span>Linhas por página:</span>
+        <select id="itens-por-pagina" class="tb-select-sm">
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="all">Todas (645)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Container da Tabela com Scroll Suave -->
+    <div class="tb-table-container">
+      <table id="tabela-municipios">
+        <thead>
+          <tr>
+            <th scope="col" class="sortable-th" data-col="nome" onclick="window.ordenarPorColuna('nome')" style="width: 17%; cursor: pointer;">
+              Município <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="super" onclick="window.ordenarPorColuna('super')" style="width: 14%; cursor: pointer;">
+              Superintendência <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="nivel" onclick="window.ordenarPorColuna('nivel')" style="text-align: center; width: 14%; cursor: pointer;">
+              Nível de Apoio <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="obitos" onclick="window.ordenarPorColuna('obitos')" style="text-align: right; width: 9%; cursor: pointer;">
+              % Óbitos <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="sinistros" onclick="window.ordenarPorColuna('sinistros')" style="text-align: right; width: 9%; cursor: pointer;">
+              % Sinistros <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="snt" onclick="window.ordenarPorColuna('snt')" style="text-align: center; width: 8%; cursor: pointer;">
+              SNT <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="der" onclick="window.ordenarPorColuna('der')" style="width: 7%; cursor: pointer;">
+              DER <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="saude" onclick="window.ordenarPorColuna('saude')" style="width: 8%; cursor: pointer;">
+              SES (DRS) <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" class="sortable-th" data-col="pm" onclick="window.ordenarPorColuna('pm')" style="width: 8%; cursor: pointer;">
+              PMESP <span class="tb-sort-icon">↕</span>
+            </th>
+            <th scope="col" style="text-align: center; width: 9%;">
+              Rodovias
+            </th>
+            <th scope="col" style="text-align: center; width: 6%;">
+              Ação
+            </th>
+          </tr>
+        </thead>
+        <tbody id="tabela-municipios-corpo">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Rodapé de Paginação -->
+    <div class="tb-footer">
+      <div id="info-paginacao" class="tb-footer-info">
+        Página 1 de 26
+      </div>
+      <nav aria-label="Navegação da tabela">
+        <ul id="paginacao-lista" class="tb-pagination-list">
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var todosMunicipios = [];
+  var municipiosFiltrados = [];
+  var paginaAtual = 1;
+  var itensPorPagina = 25;
+  var colunaOrdenacao = 'nome';
+  var direcaoOrdenacao = 'asc';
+  var eventosIniciados = false;
+  var ultimoClickSort = 0;
+
+  var pesosNivel = {
+    'Apoio completo': 1,
+    'Apoio em Educação': 2,
+    'Apoio em Fiscalização': 3,
+    'Realiza sozinho': 4,
+    'Sem adesão ao SNT': 5,
+    'Sem adesão ao SISTRAN': 6,
+    'Sem informação': 7
+  };
+
+  function norm(s) {
+    if (!s) return '';
+    return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+                    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+  }
+
+  function normalizarTexto(txt) {
+    if (!txt) return '';
+    return txt.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+
+  function getCategoriaNivel(p) {
+    var v = p.nivel_apoio;
+    var nv = (v !== null && v !== undefined && !isNaN(+v)) ? Math.round(+v) : null;
+    if (nv === 1) return 'Realiza sozinho';
+    if (nv === 2) {
+      var ac = norm(p.acoes);
+      if (ac === 'sim') return 'Apoio em Fiscalização';
+      return 'Apoio em Educação';
+    }
+    if (nv === 3) return 'Apoio completo';
+    if (nv === 4) return 'Sem adesão ao SNT';
+    if (p.sem_adesao == 1) return 'Sem adesão ao SISTRAN';
+    return 'Sem informação';
+  }
+
+  function getBadgeNivel(cat) {
+    var styles = {
+      'Realiza sozinho': 'background-color: #D0E5F5; color: #073860; border: 1px solid #a3cbe8;',
+      'Apoio em Fiscalização': 'background-color: #72B3E8; color: #05243e; border: 1px solid #4a9ede;',
+      'Apoio em Educação': 'background-color: #2b7bc4; color: #ffffff; border: 1px solid #2365a1;',
+      'Apoio completo': 'background-color: #005CA8; color: #ffffff; border: 1px solid #00457d;',
+      'Sem adesão ao SNT': 'background-color: #004077; color: #ffffff; border: 1px solid #002a4e;',
+      'Sem adesão ao SISTRAN': 'background-color: #6E6E6E; color: #ffffff; border: 1px solid #555555;',
+      'Sem informação': 'background-color: #94a3b8; color: #ffffff;'
+    };
+    var s = styles[cat] || styles['Sem informação'];
+    return '<span class="tb-badge" style="' + s + '">' + cat + '</span>';
+  }
+
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function processarDados(features) {
+    todosMunicipios = features.map(function(f) {
+      var p = f.properties || {};
+      var cat = getCategoriaNivel(p);
+      return {
+        nome: p.nome || '',
+        super: p.super || '',
+        categoriaNivel: cat,
+        nivel_apoio: p.nivel_apoio,
+        prop_obitos: (p.prop_obitos !== null && p.prop_obitos !== undefined && !isNaN(+p.prop_obitos)) ? +p.prop_obitos : null,
+        prop_sinistros: (p.prop_sinistros !== null && p.prop_sinistros !== undefined && !isNaN(+p.prop_sinistros)) ? +p.prop_sinistros : null,
+        snt: (p.snt || '').toString().trim().toUpperCase(),
+        der: p.der || '',
+        pf_der: p.pf_der || '',
+        saude: p.saude || '',
+        pf_drs: p.pf_drs || '',
+        pm: p.pm || '',
+        pf_pm: p.pf_pm || '',
+        artesp: +p.artesp === 1,
+        antt: +p.antt === 1,
+        prf: +p.prf === 1,
+        sem_adesao: p.sem_adesao == 1
+      };
+    });
+
+    popularSelectSuper();
+    aplicarFiltros();
+  }
+
+  function popularSelectSuper() {
+    var select = document.getElementById('filtro-super');
+    if (!select) return;
+    var supersSet = {};
+    todosMunicipios.forEach(function(m) {
+      if (m.super) supersSet[m.super] = true;
+    });
+    var supers = Object.keys(supersSet).sort(function(a, b) {
+      return a.localeCompare(b, 'pt-BR');
+    });
+    select.innerHTML = '<option value="">Todas as Superintendências (' + supers.length + ')</option>';
+    supers.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      select.appendChild(opt);
+    });
+  }
+
+  function aplicarFiltros() {
+    var busca = normalizarTexto(document.getElementById('filtro-busca') ? document.getElementById('filtro-busca').value : '');
+    var superSel = document.getElementById('filtro-super') ? document.getElementById('filtro-super').value : '';
+    var nivelSel = document.getElementById('filtro-nivel') ? document.getElementById('filtro-nivel').value : '';
+    var sntSel = document.getElementById('filtro-snt') ? document.getElementById('filtro-snt').value : '';
+
+    municipiosFiltrados = todosMunicipios.filter(function(m) {
+      if (superSel && m.super !== superSel) return false;
+      if (nivelSel && m.categoriaNivel !== nivelSel) return false;
+      if (sntSel) {
+        if (sntSel === 'SIM' && m.snt !== 'SIM') return false;
+        if (sntSel === 'NÃO' && (m.snt === 'SIM' || !m.snt)) return false;
+      }
+      if (busca) {
+        var strBusca = normalizarTexto(m.nome + ' ' + m.super + ' ' + m.der + ' ' + m.saude + ' ' + m.pm + ' ' + m.categoriaNivel);
+        if (strBusca.indexOf(busca) === -1) return false;
+      }
+      return true;
+    });
+
+    ordenarDados();
+    paginaAtual = 1;
+    renderizarTabela();
+  }
+
+  function ordenarDados() {
+    municipiosFiltrados.sort(function(a, b) {
+      if (colunaOrdenacao === 'nome') {
+        var r = a.nome.localeCompare(b.nome, 'pt-BR');
+        return (direcaoOrdenacao === 'asc') ? r : -r;
+      }
+      if (colunaOrdenacao === 'super') {
+        var r = a.super.localeCompare(b.super, 'pt-BR');
+        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'nivel') {
+        var pA = pesosNivel[a.categoriaNivel] || 99;
+        var pB = pesosNivel[b.categoriaNivel] || 99;
+        if (pA !== pB) return (direcaoOrdenacao === 'asc') ? (pA - pB) : (pB - pA);
+        var oA = (a.prop_obitos !== null) ? a.prop_obitos : -1;
+        var oB = (b.prop_obitos !== null) ? b.prop_obitos : -1;
+        if (oA !== oB) return oB - oA;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'obitos') {
+        var vA = (a.prop_obitos !== null && !isNaN(a.prop_obitos)) ? a.prop_obitos : -1;
+        var vB = (b.prop_obitos !== null && !isNaN(b.prop_obitos)) ? b.prop_obitos : -1;
+        if (vA !== vB) return (direcaoOrdenacao === 'asc') ? (vA - vB) : (vB - vA);
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'sinistros') {
+        var vA = (a.prop_sinistros !== null && !isNaN(a.prop_sinistros)) ? a.prop_sinistros : -1;
+        var vB = (b.prop_sinistros !== null && !isNaN(b.prop_sinistros)) ? b.prop_sinistros : -1;
+        if (vA !== vB) return (direcaoOrdenacao === 'asc') ? (vA - vB) : (vB - vA);
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'snt') {
+        var r = a.snt.localeCompare(b.snt);
+        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'der') {
+        var r = a.der.localeCompare(b.der, 'pt-BR');
+        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'saude') {
+        var r = a.saude.localeCompare(b.saude, 'pt-BR');
+        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      if (colunaOrdenacao === 'pm') {
+        var r = a.pm.localeCompare(b.pm, 'pt-BR');
+        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      }
+      return 0;
+    });
+
+    atualizarIconesOrdenacao();
+  }
+
+  function atualizarIconesOrdenacao() {
+    document.querySelectorAll('#tabela-municipios th[data-col]').forEach(function(th) {
+      var col = th.getAttribute('data-col');
+      var icon = th.querySelector('.tb-sort-icon');
+      if (!icon) return;
+      if (col === colunaOrdenacao) {
+        icon.textContent = (direcaoOrdenacao === 'asc') ? ' ▲' : ' ▼';
+        icon.className = 'tb-sort-icon tb-sort-active';
+        th.style.backgroundColor = '#002e56';
+      } else {
+        icon.textContent = ' ↕';
+        icon.className = 'tb-sort-icon';
+        th.style.backgroundColor = '';
+      }
+    });
+  }
+
+  window.ordenarPorColuna = function(col) {
+    var agora = Date.now();
+    if (agora - ultimoClickSort < 50) return;
+    ultimoClickSort = agora;
+
+    if (col === colunaOrdenacao) {
+      direcaoOrdenacao = (direcaoOrdenacao === 'asc') ? 'desc' : 'asc';
+    } else {
+      colunaOrdenacao = col;
+      direcaoOrdenacao = (col === 'obitos' || col === 'sinistros') ? 'desc' : 'asc';
+    }
+    ordenarDados();
+    paginaAtual = 1;
+    renderizarTabela();
+  };
+
+  function renderizarTabela() {
+    var corpo = document.getElementById('tabela-municipios-corpo');
+    if (!corpo) return;
+
+    var total = municipiosFiltrados.length;
+    var contadorEl = document.getElementById('contador-tabela');
+    if (contadorEl) {
+      if (total === todosMunicipios.length) {
+        contadorEl.textContent = 'Exibindo todos os ' + total + ' municípios';
+      } else {
+        contadorEl.textContent = 'Exibindo ' + total + ' de ' + todosMunicipios.length + ' municípios (filtrados)';
+      }
+    }
+
+    if (total === 0) {
+      corpo.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 30px; color: #64748b; font-size: 14px;"><i class="bi bi-info-circle" style="margin-right: 6px;"></i>Nenhum município encontrado com os filtros selecionados.</td></tr>';
+      renderizarPaginacao(0, 0, 0);
+      return;
+    }
+
+    var limite = (itensPorPagina === 'all') ? total : parseInt(itensPorPagina, 10);
+    var totalPaginas = Math.ceil(total / limite);
+    if (paginaAtual > totalPaginas) paginaAtual = 1;
+
+    var inicio = (paginaAtual - 1) * limite;
+    var fim = Math.min(inicio + limite, total);
+    var itensPagina = municipiosFiltrados.slice(inicio, fim);
+
+    var html = '';
+    itensPagina.forEach(function(m) {
+      var tagsRod = [];
+      if (m.artesp) tagsRod.push('<span class="tb-tag-artesp" title="Rodovias concedidas sob regulação ARTESP">ARTESP</span>');
+      if (m.antt) tagsRod.push('<span class="tb-tag-antt" title="Rodovias federais concedidas sob regulação ANTT">ANTT</span>');
+      if (m.prf) tagsRod.push('<span class="tb-tag-prf" title="Fiscalização da Polícia Rodoviária Federal">PRF</span>');
+      var rodoviasHtml = tagsRod.length ? tagsRod.join('') : '<span style="color: #94a3b8;">-</span>';
+
+      var derHtml = esc(m.der || '-');
+      if (m.pf_der && m.pf_der.trim() !== '') {
+        derHtml += ' <span style="cursor:help; font-size:13px; margin-left:3px;" title="Ponto focal DER: ' + esc(m.pf_der) + '">ℹ️</span>';
+      }
+
+      var saudeClean = m.saude ? m.saude.replace(/^DRS\s+[IVXLCDM]+\s*-\s*/, '') : '-';
+      var saudeHtml = esc(saudeClean);
+      if (m.pf_drs && m.pf_drs.trim() !== '') {
+        saudeHtml += ' <span style="cursor:help; font-size:13px; margin-left:3px;" title="Ponto focal DRS: ' + esc(m.pf_drs) + '">ℹ️</span>';
+      }
+
+      var pmClean = m.pm ? m.pm.replace(/^CPI-\d+\s*/, '') : '-';
+      var pmHtml = esc(pmClean);
+      if (m.pf_pm && m.pf_pm.trim() !== '') {
+        pmHtml += ' <span style="cursor:help; font-size:13px; margin-left:3px;" title="Ponto focal PMESP: ' + esc(m.pf_pm) + '">ℹ️</span>';
+      }
+
+      var sntBadge = (m.snt === 'SIM')
+        ? '<span class="tb-snt-sim">Sim</span>'
+        : '<span class="tb-snt-nao">Não</span>';
+
+      var obitosHtml = (m.prop_obitos !== null)
+        ? ('<span style="font-family: Consolas, monospace; font-weight: 700; color: #00284d;">' + m.prop_obitos.toFixed(1).replace('.', ',') + '%</span>')
+        : '<span style="color: #94a3b8;">-</span>';
+
+      var sinistrosHtml = (m.prop_sinistros !== null)
+        ? ('<span style="font-family: Consolas, monospace; font-weight: 700; color: #00284d;">' + m.prop_sinistros.toFixed(1).replace('.', ',') + '%</span>')
+        : '<span style="color: #94a3b8;">-</span>';
+
+      var safeNome = m.nome.replace(/'/g, "\\'");
+      var safeSuper = m.super.replace(/'/g, "\\'");
+      var btnMapa = '<button type="button" class="tb-btn-mapa" onclick="verNoMapa(\'' + safeNome + '\', \'' + safeSuper + '\')" title="Ver ' + esc(m.nome) + ' no mapa"><i class="bi bi-geo-alt-fill"></i> Ver</button>';
+
+      html += '<tr>' +
+        '<td style="font-weight: 700; color: #00284d;">' + esc(m.nome) + '</td>' +
+        '<td style="color: #475569; font-weight: 500;">' + esc(m.super) + '</td>' +
+        '<td style="text-align: center;">' + getBadgeNivel(m.categoriaNivel) + '</td>' +
+        '<td style="text-align: right;">' + obitosHtml + '</td>' +
+        '<td style="text-align: right;">' + sinistrosHtml + '</td>' +
+        '<td style="text-align: center;">' + sntBadge + '</td>' +
+        '<td>' + derHtml + '</td>' +
+        '<td title="' + esc(m.saude) + '">' + saudeHtml + '</td>' +
+        '<td title="' + esc(m.pm) + '">' + pmHtml + '</td>' +
+        '<td style="text-align: center;">' + rodoviasHtml + '</td>' +
+        '<td style="text-align: center;">' + btnMapa + '</td>' +
+        '</tr>';
+    });
+
+    corpo.innerHTML = html;
+    renderizarPaginacao(inicio + 1, fim, total);
+  }
+
+  function renderizarPaginacao(inicio, fim, total) {
+    var infoEl = document.getElementById('info-paginacao');
+    var listaEl = document.getElementById('paginacao-lista');
+    if (!infoEl || !listaEl) return;
+
+    if (total === 0) {
+      infoEl.textContent = 'Nenhum resultado';
+      listaEl.innerHTML = '';
+      return;
+    }
+
+    var limite = (itensPorPagina === 'all') ? total : parseInt(itensPorPagina, 10);
+    var totalPaginas = Math.ceil(total / limite);
+
+    infoEl.textContent = 'Mostrando ' + inicio + ' a ' + fim + ' de ' + total + ' municípios (Página ' + paginaAtual + ' de ' + totalPaginas + ')';
+
+    if (totalPaginas <= 1) {
+      listaEl.innerHTML = '';
+      return;
+    }
+
+    var pagHtml = '';
+    pagHtml += '<li><a class="tb-page-btn ' + (paginaAtual === 1 ? 'tb-page-disabled' : '') + '" href="#" data-page="' + (paginaAtual - 1) + '" aria-label="Anterior">‹</a></li>';
+
+    var paginas = [];
+    if (totalPaginas <= 7) {
+      for (var i = 1; i <= totalPaginas; i++) paginas.push(i);
+    } else {
+      paginas.push(1);
+      if (paginaAtual > 3) paginas.push('...');
+      var start = Math.max(2, paginaAtual - 1);
+      var end = Math.min(totalPaginas - 1, paginaAtual + 1);
+      for (var j = start; j <= end; j++) paginas.push(j);
+      if (paginaAtual < totalPaginas - 2) paginas.push('...');
+      paginas.push(totalPaginas);
+    }
+
+    paginas.forEach(function(p) {
+      if (p === '...') {
+        pagHtml += '<li><span class="tb-page-btn tb-page-disabled">…</span></li>';
+      } else {
+        pagHtml += '<li><a class="tb-page-btn ' + (p === paginaAtual ? 'tb-page-active' : '') + '" href="#" data-page="' + p + '">' + p + '</a></li>';
+      }
+    });
+
+    pagHtml += '<li><a class="tb-page-btn ' + (paginaAtual === totalPaginas ? 'tb-page-disabled' : '') + '" href="#" data-page="' + (paginaAtual + 1) + '" aria-label="Próximo">›</a></li>';
+
+    listaEl.innerHTML = pagHtml;
+
+    listaEl.querySelectorAll('a.tb-page-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var pg = parseInt(this.getAttribute('data-page'), 10);
+        if (pg && pg >= 1 && pg <= totalPaginas && pg !== paginaAtual) {
+          paginaAtual = pg;
+          renderizarTabela();
+        }
+      });
+    });
+  }
+
+  function exportarCSV() {
+    if (!municipiosFiltrados || !municipiosFiltrados.length) {
+      alert('Não há dados para exportar com os filtros atuais.');
+      return;
+    }
+
+    var colunas = [
+      'Município',
+      'Superintendência',
+      'Nível de Apoio',
+      '% Óbitos Motociclistas',
+      '% Sinistros Motociclistas',
+      'Adesão ao SNT',
+      'DER-SP Regional',
+      'DER-SP Ponto Focal',
+      'SES-SP DRS',
+      'SES-SP Ponto Focal',
+      'PMESP Comando',
+      'PMESP Ponto Focal',
+      'Concessão ARTESP',
+      'Rodovia Federal ANTT',
+      'Fiscalização PRF'
+    ];
+
+    var linhas = [colunas.map(function(c) { return '"' + c.replace(/"/g, '""') + '"'; }).join(';')];
+
+    municipiosFiltrados.forEach(function(m) {
+      var obitosStr = (m.prop_obitos !== null) ? m.prop_obitos.toFixed(2).replace('.', ',') + '%' : '';
+      var sinistrosStr = (m.prop_sinistros !== null) ? m.prop_sinistros.toFixed(2).replace('.', ',') + '%' : '';
+
+      var row = [
+        m.nome,
+        m.super,
+        m.categoriaNivel,
+        obitosStr,
+        sinistrosStr,
+        m.snt,
+        m.der,
+        m.pf_der,
+        m.saude,
+        m.pf_drs,
+        m.pm,
+        m.pf_pm,
+        m.artesp ? 'Sim' : 'Não',
+        m.antt ? 'Sim' : 'Não',
+        m.prf ? 'Sim' : 'Não'
+      ];
+
+      linhas.push(row.map(function(val) {
+        var s = (val === null || val === undefined) ? '' : String(val);
+        return '"' + s.replace(/"/g, '""') + '"';
+      }).join(';'));
+    });
+
+    var csvContent = '\uFEFF' + linhas.join('\r\n');
+    var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'municipios_campanha_motociclistas_2026.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function initEventos() {
+    if (eventosIniciados) return;
+    eventosIniciados = true;
+
+    var buscaInput = document.getElementById('filtro-busca');
+    if (buscaInput) {
+      buscaInput.addEventListener('input', function() { aplicarFiltros(); });
+    }
+
+    var superSelect = document.getElementById('filtro-super');
+    if (superSelect) {
+      superSelect.addEventListener('change', function() { aplicarFiltros(); });
+    }
+
+    var nivelSelect = document.getElementById('filtro-nivel');
+    if (nivelSelect) {
+      nivelSelect.addEventListener('change', function() { aplicarFiltros(); });
+    }
+
+    var sntSelect = document.getElementById('filtro-snt');
+    if (sntSelect) {
+      sntSelect.addEventListener('change', function() { aplicarFiltros(); });
+    }
+
+    var itensSelect = document.getElementById('itens-por-pagina');
+    if (itensSelect) {
+      itensSelect.addEventListener('change', function() {
+        itensPorPagina = this.value;
+        paginaAtual = 1;
+        renderizarTabela();
+      });
+    }
+
+    var btnLimpar = document.getElementById('btn-limpar-filtros');
+    if (btnLimpar) {
+      btnLimpar.addEventListener('click', function() {
+        if (buscaInput) buscaInput.value = '';
+        if (superSelect) superSelect.value = '';
+        if (nivelSelect) nivelSelect.value = '';
+        if (sntSelect) sntSelect.value = '';
+        aplicarFiltros();
+      });
+    }
+
+    var btnCsv = document.getElementById('btn-exportar-csv');
+    if (btnCsv) {
+      btnCsv.addEventListener('click', exportarCSV);
+    }
+  }
+
+  window.initTabelaDados = function(features) {
+    if (!features || !features.length) {
+      if (window.geojsonMun && window.geojsonMun.features) {
+        features = window.geojsonMun.features;
+      }
+    }
+    if (features && features.length) {
+      processarDados(features);
+      initEventos();
+    }
+  };
+
+  window.verNoMapa = function(nomeMun, superMun) {
+    var tabLink = document.getElementById('tab-mapa-dinamico');
+    if (tabLink) {
+      if (window.bootstrap && bootstrap.Tab) {
+        bootstrap.Tab.getOrCreateInstance(tabLink).show();
+      } else {
+        tabLink.click();
+      }
+    }
+    setTimeout(function() {
+      window.dispatchEvent(new Event('resize'));
+      if (typeof window.selecionarSuperintendencia === 'function') {
+        window.selecionarSuperintendencia(superMun, nomeMun);
+      }
+    }, 200);
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var tabMapa = document.getElementById('tab-mapa-dinamico');
+    if (tabMapa) {
+      tabMapa.addEventListener('shown.bs.tab', function() {
+        window.dispatchEvent(new Event('resize'));
+      });
+    }
+    if (window.geojsonMun && typeof window.initTabelaDados === 'function') {
+      window.initTabelaDados(window.geojsonMun.features);
+    }
+  });
+
+  window.addEventListener('hashchange', function() {
+    if (window.location.hash === '#mapa-dinamico' || window.location.hash === '') {
+      setTimeout(function() {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
+    }
+  });
+})();
+</script>
+')
 ```
