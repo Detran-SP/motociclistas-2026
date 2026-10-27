@@ -10,6 +10,7 @@ format:
     css: estilos.css
     include-in-header:
       - text: |
+          <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap" rel="stylesheet">
@@ -548,10 +549,10 @@ function(el, x, data) {
     '.mdn-grp{font-weight:700;font-size:12px;color:#555;margin:7px 0 2px 0;}' +
     '.mdn-temas label{display:flex;align-items:center;gap:6px;cursor:pointer;padding:1px 0;margin:0;}' +
     '.mdn-temas input{accent-color:#004077;margin:0;}' +
-    '.mdn-leg{max-width:360px;max-height:55vh;overflow:auto;font-size:15px;}' +
-    '.mdn-leg .mdn-tit{font-size:16px;}' +
+    '.mdn-leg{width:max-content;min-width:320px;max-width:min(480px,calc(100vw - 40px));max-height:55vh;overflow:auto;font-size:13.5px;}' +
+    '.mdn-leg .mdn-tit{font-size:15px;}' +
     '.mdn-it{display:flex;align-items:center;gap:7px;margin:2px 0;padding:3px 6px;border-radius:4px;' +
-      'cursor:pointer;user-select:none;transition:all .15s ease;}' +
+      'cursor:pointer;user-select:none;transition:all .15s ease;white-space:nowrap;}' +
     '.mdn-it:hover{background:rgba(0,64,119,.08);}' +
     '.mdn-it.ativo{background:rgba(0,64,119,.12);outline:1.5px solid #004077;color:#004077;font-weight:700;}' +
     '.mdn-it.inativo{opacity:0.38;}' +
@@ -604,10 +605,11 @@ function(el, x, data) {
     '.mdn-tag-orgao{font-size:9.5px;background:#F8FAFC;border:1px solid #CBD5E1;color:#334155;padding:1px 4px;border-radius:3px;white-space:nowrap;}' +
     '.mdn-tag-rodovia{font-size:9px;background:#EDE9FE;border:1px solid #C4B5FD;color:#5B21B6;font-weight:700;padding:1px 4px;border-radius:3px;}' +
     '.mdn-prio-vazio{text-align:center;padding:25px 15px;color:#64748B;font-size:12.5px;line-height:1.4;}' +
-    '.mdn-btn-toggle-prio{background:#004077;color:#fff;font-weight:700;font-size:12px;padding:6px 10px;' +
-      'border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.35);border:0;cursor:pointer;display:flex;align-items:center;' +
-      'gap:5px;transition:background .15s;}' +
-    '.mdn-btn-toggle-prio:hover{background:#005CA8;}';
+    '.mdn-btn-toggle-prio{background:#00284d;color:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;' +
+      'border-radius:24px;box-shadow:0 4px 14px rgba(0,40,119,.35);border:1.5px solid rgba(255,255,255,.2);' +
+      'cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s ease;}' +
+    '.mdn-btn-toggle-prio:hover{background:#003e7e;box-shadow:0 6px 18px rgba(0,40,119,.45);transform:translateY(-1px);}' +
+    '.mdn-prio-badge{background:#f59e0b;color:#78350f;font-weight:800;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:2px;}';
   document.head.appendChild(css);
 
   // ------------------------------------------------------------------
@@ -772,6 +774,9 @@ function(el, x, data) {
     filtrosLegenda.clear();
     buscaTexto = '';
     filtroOrgao = 'todos';
+    filtroNivel = 'todos';
+    var nivelSelEl = painelDiv ? painelDiv.querySelector('#mdn-prio-nivel') : null;
+    if (nivelSelEl) nivelSelEl.value = 'todos';
     munSelecionadoCard = null;
     map.closePopup();
     superLayer.setStyle(estiloSuper);
@@ -791,7 +796,7 @@ function(el, x, data) {
     atualizarLegenda();
     if (typeof atualizarListaPriorizacao === 'function') {
       atualizarListaPriorizacao();
-      alternarPainelPriorizacao(true);
+      alternarPainelPriorizacao(false);
     }
   }
 
@@ -800,6 +805,9 @@ function(el, x, data) {
     filtrosLegenda.clear();
     buscaTexto = '';
     filtroOrgao = 'todos';
+    filtroNivel = 'todos';
+    var nivelSelEl = painelDiv ? painelDiv.querySelector('#mdn-prio-nivel') : null;
+    if (nivelSelEl) nivelSelEl.value = 'todos';
     munSelecionadoCard = null;
     map.closePopup();
     if (munLayer)      { map.removeLayer(munLayer);      munLayer = null; }
@@ -961,6 +969,7 @@ function(el, x, data) {
   var ordenacaoAtual = 'score';
   var buscaTexto = '';
   var filtroOrgao = 'todos';
+  var filtroNivel = 'todos';
   var munSelecionadoCard = null;
 
   function deveIgnorar(p) {
@@ -1045,7 +1054,7 @@ function(el, x, data) {
   var ctrlPrio = L.control({position: 'topright'});
   ctrlPrio.onAdd = function() {
     btnPrioDiv = L.DomUtil.create('div', '');
-    btnPrioDiv.innerHTML = '<button type="button" class="mdn-btn-toggle-prio">📋 Priorização</button>';
+    btnPrioDiv.innerHTML = '<button type="button" class="mdn-btn-toggle-prio">📋 Lista de Priorização</button>';
     L.DomEvent.disableClickPropagation(btnPrioDiv);
     btnPrioDiv.querySelector('button').addEventListener('click', function() {
       alternarPainelPriorizacao();
@@ -1063,12 +1072,12 @@ function(el, x, data) {
       count = MUN.features.filter(function(f) {
         return f.properties.super === sel && !deveIgnorar(f.properties);
       }).length;
-      btn.innerHTML = '📋 Priorização (' + count + ')';
+      btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + count + '</span>';
     } else {
       var countTotal = MUN.features.filter(function(f) {
         return !deveIgnorar(f.properties);
       }).length;
-      btn.innerHTML = '📋 Priorização (' + countTotal + ')';
+      btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + countTotal + '</span>';
     }
   }
 
@@ -1092,6 +1101,16 @@ function(el, x, data) {
           '</select>' +
           '<select class="mdn-prio-select" id="mdn-prio-orgao" title="Filtrar por órgão">' +
             '<option value="todos">Todos os órgãos</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="mdn-prio-select-row" style="margin-top:6px;">' +
+          '<select class="mdn-prio-select" id="mdn-prio-nivel" title="Filtrar por Nível de Apoio" style="width:100%;">' +
+            '<option value="todos">Todos os níveis de apoio</option>' +
+            '<option value="Apoio em Educação/Fiscalização sem SNT">Apoio em Educação/Fiscalização sem SNT</option>' +
+            '<option value="Apoio em Educação sem SNT">Apoio em Educação sem SNT</option>' +
+            '<option value="Apoio em Educação/Fiscalização">Apoio em Educação/Fiscalização</option>' +
+            '<option value="Apoio em Educação">Apoio em Educação</option>' +
+            '<option value="Apoio em Fiscalização">Apoio em Fiscalização</option>' +
           '</select>' +
         '</div>' +
       '</div>' +
@@ -1118,6 +1137,14 @@ function(el, x, data) {
       filtroOrgao = e.target.value;
       atualizarListaCards();
     });
+
+    var selectNivel = painelDiv.querySelector('#mdn-prio-nivel');
+    if (selectNivel) {
+      selectNivel.addEventListener('change', function(e) {
+        filtroNivel = e.target.value;
+        atualizarListaCards();
+      });
+    }
   }
   criarEstruturaPainel();
 
@@ -1228,6 +1255,11 @@ function(el, x, data) {
         if (tipo === 'saude' && p.saude !== valor) return false;
         if (tipo === 'pm' && p.pm !== valor) return false;
         if (tipo === 'rod' && +p[valor] !== 1) return false;
+      }
+
+      if (filtroNivel !== 'todos') {
+        var nv = valorDe(p, TEMAS[0]);
+        if (nv !== filtroNivel) return false;
       }
 
       return true;
@@ -1376,8 +1408,8 @@ cat('
           <p>Consulte, filtre e exporte os dados dos 645 municípios paulistas da Campanha Motociclistas 2026</p>
         </div>
         <div class="tb-btn-group">
-          <button type="button" id="btn-exportar-csv" class="tb-btn-csv" title="Exportar dados filtrados em formato CSV">
-            <i class="bi bi-file-earmark-spreadsheet-fill"></i> Exportar CSV
+          <button type="button" id="btn-exportar-xlsx" class="tb-btn-xlsx" title="Exportar dados filtrados em formato Excel (.xlsx)">
+            <i class="bi bi-file-earmark-excel-fill"></i> Exportar XLSX
           </button>
           <button type="button" id="btn-limpar-filtros" class="tb-btn-clear" title="Limpar todos os filtros aplicados">
             <i class="bi bi-arrow-counterclockwise"></i> Limpar Filtros
@@ -1464,22 +1496,25 @@ cat('
       <table id="tabela-municipios">
         <thead>
           <tr>
-            <th scope="col" class="sortable-th" data-col="nome" onclick="window.ordenarPorColuna('nome')" style="width: 17%; cursor: pointer;" title="Clique para ordenar por Município">
+            <th scope="col" style="width: 38px; text-align: center;">
+              <input type="checkbox" id="check-todos-municipios" class="tb-checkbox" title="Selecionar todos os municípios filtrados">
+            </th>
+            <th scope="col" class="sortable-th" data-col="nome" onclick="window.ordenarPorColuna('nome')" style="width: 15%; cursor: pointer;" title="Clique para ordenar por Município">
               Município <span class="tb-sort-icon">▲</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="super" onclick="window.ordenarPorColuna('super')" style="width: 14%; cursor: pointer;" title="Clique para ordenar por Superintendência">
+            <th scope="col" class="sortable-th" data-col="super" onclick="window.ordenarPorColuna('super')" style="width: 13%; cursor: pointer;" title="Clique para ordenar por Superintendência">
               Superintendência <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="nivel" onclick="window.ordenarPorColuna('nivel')" style="text-align: center; width: 14%; cursor: pointer;" title="Clique para ordenar por Nível de Apoio">
+            <th scope="col" class="sortable-th" data-col="nivel" onclick="window.ordenarPorColuna('nivel')" style="text-align: center; width: 13%; cursor: pointer;" title="Clique para ordenar por Nível de Apoio">
               Nível de Apoio <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="obitos" onclick="window.ordenarPorColuna('obitos')" style="text-align: right; width: 9%; cursor: pointer;" title="Clique para ordenar por % Óbitos">
+            <th scope="col" class="sortable-th" data-col="obitos" onclick="window.ordenarPorColuna('obitos')" style="text-align: right; width: 8%; cursor: pointer;" title="Clique para ordenar por % Óbitos">
               % Óbitos <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="sinistros" onclick="window.ordenarPorColuna('sinistros')" style="text-align: right; width: 9%; cursor: pointer;" title="Clique para ordenar por % Sinistros">
+            <th scope="col" class="sortable-th" data-col="sinistros" onclick="window.ordenarPorColuna('sinistros')" style="text-align: right; width: 8%; cursor: pointer;" title="Clique para ordenar por % Sinistros">
               % Sinistros <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="snt" onclick="window.ordenarPorColuna('snt')" style="text-align: center; width: 8%; cursor: pointer;" title="Clique para ordenar por Adesão ao SNT">
+            <th scope="col" class="sortable-th" data-col="snt" onclick="window.ordenarPorColuna('snt')" style="text-align: center; width: 7%; cursor: pointer;" title="Clique para ordenar por Adesão ao SNT">
               SNT <span class="tb-sort-icon">↕</span>
             </th>
             <th scope="col" class="sortable-th" data-col="der" onclick="window.ordenarPorColuna('der')" style="width: 7%; cursor: pointer;" title="Clique para ordenar por DER">
@@ -1491,7 +1526,7 @@ cat('
             <th scope="col" class="sortable-th" data-col="pm" onclick="window.ordenarPorColuna('pm')" style="width: 8%; cursor: pointer;" title="Clique para ordenar por PMESP">
               PMESP <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" style="text-align: center; width: 9%;">
+            <th scope="col" style="text-align: center; width: 8%;">
               Rodovias
             </th>
             <th scope="col" style="text-align: center; width: 6%;">
@@ -1513,6 +1548,50 @@ cat('
         <ul id="paginacao-lista" class="tb-pagination-list">
         </ul>
       </nav>
+    </div>
+  </div>
+
+  <!-- Gaveta Inferior Retrátil de Articulação e Contatos Regionais -->
+  <div id="tb-drawer" class="tb-drawer">
+    <div id="tb-drawer-bar" class="tb-drawer-bar">
+      <div class="tb-drawer-info">
+        <i class="bi bi-people-fill" style="font-size: 16px;"></i>
+        <span><strong>Painel de Articulação Regional e Contatos</strong></span>
+        <span id="tb-drawer-badge-count" class="tb-drawer-badge">0 selecionados</span>
+        <span id="tb-drawer-subinfo" class="tb-drawer-subinfo"></span>
+      </div>
+      <div class="tb-drawer-controls">
+        <button type="button" id="btn-drawer-toggle" class="tb-btn-drawer-toggle" title="Expandir ou recolher painel de contatos">
+          <i class="bi bi-chevron-up" id="icon-drawer-toggle"></i> <span id="txt-drawer-toggle">Abrir Painel</span>
+        </button>
+        <button type="button" id="btn-drawer-clear" class="tb-btn-drawer-clear" title="Desmarcar todos os municípios">
+          <i class="bi bi-x-circle"></i> Limpar Seleção
+        </button>
+      </div>
+    </div>
+
+    <div id="tb-drawer-content" class="tb-drawer-content">
+      <!-- Seção 1: Lista Extensa de Municípios Selecionados -->
+      <div class="tb-drawer-muns-section">
+        <div class="tb-drawer-section-title">
+          <i class="bi bi-geo-alt-fill"></i>
+          <span>Municípios Selecionados (<span id="tb-drawer-muns-count">0</span>)</span>
+        </div>
+        <div id="tb-drawer-muns-chips" class="tb-drawer-muns-chips">
+          <!-- Chips gerados dinamicamente: Nome (Super) ✕ -->
+        </div>
+      </div>
+
+      <!-- Seção 2: Órgãos e Responsáveis Regionais -->
+      <div class="tb-drawer-orgs-section">
+        <div class="tb-drawer-section-title">
+          <i class="bi bi-building"></i>
+          <span>Órgãos e Responsáveis Regionais</span>
+        </div>
+        <div id="tb-orgs-grid" class="tb-orgs-grid">
+          <!-- Cards gerados dinamicamente -->
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1537,6 +1616,8 @@ cat('
   var regrasOrdenacao = [
     { col: 'nome', dir: 'asc' }
   ];
+  var municipiosSelecionados = new Set();
+  var gavetaExpandida = false;
   var eventosIniciados = false;
   var ultimoClickSort = 0;
 
@@ -1932,7 +2013,11 @@ cat('
       var safeSuper = m.super.replace(/'/g, "\\'");
       var btnMapa = '<button type="button" class="tb-btn-mapa" onclick="verNoMapa(\'' + safeNome + '\', \'' + safeSuper + '\')" title="Ver ' + esc(m.nome) + ' no mapa"><i class="bi bi-geo-alt-fill"></i> Ver</button>';
 
-      html += '<tr>' +
+      var isChecked = municipiosSelecionados.has(m.nome);
+      var trClass = isChecked ? ' class="tr-selected"' : '';
+
+      html += '<tr' + trClass + ' data-nome="' + esc(m.nome) + '">' +
+        '<td style="text-align: center;"><input type="checkbox" class="tb-checkbox check-mun" data-nome="' + esc(m.nome) + '"' + (isChecked ? ' checked' : '') + '></td>' +
         '<td style="font-weight: 700; color: #00284d;">' + esc(m.nome) + '</td>' +
         '<td style="color: #475569; font-weight: 500;">' + esc(m.super) + '</td>' +
         '<td style="text-align: center;">' + getBadgeNivel(m.categoriaNivel) + '</td>' +
@@ -1949,6 +2034,7 @@ cat('
 
     corpo.innerHTML = html;
     renderizarPaginacao(inicio + 1, fim, total);
+    atualizarMasterCheck();
   }
 
   function renderizarPaginacao(inicio, fim, total) {
@@ -2012,70 +2098,234 @@ cat('
     });
   }
 
-  function exportarCSV() {
+  function exportarXLSX() {
     if (!municipiosFiltrados || !municipiosFiltrados.length) {
       alert('Não há dados para exportar com os filtros atuais.');
       return;
     }
 
-    var colunas = [
-      'Município',
-      'Superintendência',
-      'Nível de Apoio',
-      '% Óbitos Motociclistas',
-      '% Sinistros Motociclistas',
-      'Adesão ao SNT',
-      'DER-SP Regional',
-      'DER-SP Ponto Focal',
-      'SES-SP DRS',
-      'SES-SP Ponto Focal',
-      'PMESP Comando',
-      'PMESP Ponto Focal',
-      'Concessão ARTESP',
-      'Rodovia Federal ANTT',
-      'Fiscalização PRF'
-    ];
+    function gerarPlanilha() {
+      var dadosExcel = municipiosFiltrados.map(function(m) {
+        var obitosStr = (m.prop_obitos !== null && m.prop_obitos !== undefined) ? m.prop_obitos.toFixed(2).replace('.', ',') + '%' : '';
+        var sinistrosStr = (m.prop_sinistros !== null && m.prop_sinistros !== undefined) ? m.prop_sinistros.toFixed(2).replace('.', ',') + '%' : '';
 
-    var linhas = [colunas.map(function(c) { return '"' + c.replace(/"/g, '""') + '"'; }).join(';')];
+        return {
+          'Município': m.nome,
+          'Superintendência': m.super,
+          'Nível de Apoio': m.categoriaNivel,
+          '% Óbitos Motociclistas': obitosStr,
+          '% Sinistros Motociclistas': sinistrosStr,
+          'Adesão ao SNT': m.snt,
+          'DER-SP Regional': m.der || '',
+          'DER-SP Ponto Focal': m.pf_der || '',
+          'SES-SP DRS': m.saude || '',
+          'SES-SP Ponto Focal': m.pf_drs || '',
+          'PMESP Comando': m.pm || '',
+          'PMESP Ponto Focal': m.pf_pm || '',
+          'Concessão ARTESP': m.artesp ? 'Sim' : 'Não',
+          'Rodovia Federal ANTT': m.antt ? 'Sim' : 'Não',
+          'Fiscalização PRF': m.prf ? 'Sim' : 'Não'
+        };
+      });
 
-    municipiosFiltrados.forEach(function(m) {
-      var obitosStr = (m.prop_obitos !== null) ? m.prop_obitos.toFixed(2).replace('.', ',') + '%' : '';
-      var sinistrosStr = (m.prop_sinistros !== null) ? m.prop_sinistros.toFixed(2).replace('.', ',') + '%' : '';
+      var ws = XLSX.utils.json_to_sheet(dadosExcel);
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Municípios');
+      XLSX.writeFile(wb, 'municipios_campanha_motociclistas_2026.xlsx');
+    }
 
-      var row = [
-        m.nome,
-        m.super,
-        m.categoriaNivel,
-        obitosStr,
-        sinistrosStr,
-        m.snt,
-        m.der,
-        m.pf_der,
-        m.saude,
-        m.pf_drs,
-        m.pm,
-        m.pf_pm,
-        m.artesp ? 'Sim' : 'Não',
-        m.antt ? 'Sim' : 'Não',
-        m.prf ? 'Sim' : 'Não'
-      ];
+    if (typeof XLSX !== 'undefined') {
+      gerarPlanilha();
+    } else {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = gerarPlanilha;
+      s.onerror = function() {
+        alert('Erro ao carregar biblioteca de exportação Excel. Verifique sua conexão com a internet.');
+      };
+      document.head.appendChild(s);
+    }
+  }
 
-      linhas.push(row.map(function(val) {
-        var s = (val === null || val === undefined) ? '' : String(val);
-        return '"' + s.replace(/"/g, '""') + '"';
-      }).join(';'));
+  function atualizarMasterCheck() {
+    var checkTodos = document.getElementById('check-todos-municipios');
+    if (!checkTodos) return;
+    var totalFilt = municipiosFiltrados.length;
+    if (totalFilt === 0) {
+      checkTodos.checked = false;
+      checkTodos.indeterminate = false;
+      checkTodos.disabled = true;
+    } else {
+      checkTodos.disabled = false;
+      var cont = 0;
+      for (var i = 0; i < totalFilt; i++) {
+        if (municipiosSelecionados.has(municipiosFiltrados[i].nome)) cont++;
+      }
+      checkTodos.checked = (cont === totalFilt);
+      checkTodos.indeterminate = (cont > 0 && cont < totalFilt);
+    }
+  }
+
+  function atualizarGaveta() {
+    var drawer = document.getElementById('tb-drawer');
+    if (!drawer) return;
+
+    var totalSel = municipiosSelecionados.size;
+    if (totalSel === 0) {
+      drawer.classList.remove('is-visible', 'is-expanded');
+      gavetaExpandida = false;
+      return;
+    }
+
+    drawer.classList.add('is-visible');
+    if (gavetaExpandida) {
+      drawer.classList.add('is-expanded');
+    } else {
+      drawer.classList.remove('is-expanded');
+    }
+
+    var badgeCount = document.getElementById('tb-drawer-badge-count');
+    if (badgeCount) {
+      badgeCount.textContent = totalSel + (totalSel === 1 ? ' município selecionado' : ' municípios selecionados');
+    }
+
+    var munsCount = document.getElementById('tb-drawer-muns-count');
+    if (munsCount) {
+      munsCount.textContent = totalSel;
+    }
+
+    var iconToggle = document.getElementById('icon-drawer-toggle');
+    var txtToggle = document.getElementById('txt-drawer-toggle');
+    if (iconToggle && txtToggle) {
+      if (gavetaExpandida) {
+        iconToggle.className = 'bi bi-chevron-down';
+        txtToggle.textContent = 'Recolher Painel';
+      } else {
+        iconToggle.className = 'bi bi-chevron-up';
+        txtToggle.textContent = 'Abrir Painel';
+      }
+    }
+
+    var selMuns = todosMunicipios.filter(function(m) {
+      return municipiosSelecionados.has(m.nome);
     });
 
-    var csvContent = '\uFEFF' + linhas.join('\r\n');
-    var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'municipios_campanha_motociclistas_2026.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    var dersMap = {};
+    var pmsMap = {};
+    var sesMap = {};
+    var prfMuns = [];
+
+    selMuns.forEach(function(m) {
+      if (m.der) {
+        if (!dersMap[m.der]) dersMap[m.der] = [];
+        dersMap[m.der].push(m.nome);
+      }
+      if (m.pm) {
+        if (!pmsMap[m.pm]) pmsMap[m.pm] = [];
+        pmsMap[m.pm].push(m.nome);
+      }
+      if (m.saude) {
+        if (!sesMap[m.saude]) sesMap[m.saude] = [];
+        sesMap[m.saude].push(m.nome);
+      }
+      if (m.prf) prfMuns.push(m.nome);
+    });
+
+    var totalDivisoes = Object.keys(dersMap).length + Object.keys(pmsMap).length + Object.keys(sesMap).length + (prfMuns.length > 0 ? 1 : 0);
+    var subinfo = document.getElementById('tb-drawer-subinfo');
+    if (subinfo) {
+      subinfo.textContent = '| ' + totalDivisoes + (totalDivisoes === 1 ? ' divisão regional envolvida' : ' divisões regionais envolvidas');
+    }
+
+    // Renderizar Seção 1: Lista Extensa de Municípios Selecionados
+    var chipsEl = document.getElementById('tb-drawer-muns-chips');
+    if (chipsEl) {
+      var chipsHtml = '';
+      selMuns.sort(function(a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }).forEach(function(m) {
+        chipsHtml += '<span class="tb-chip-mun-extensive">' +
+          esc(m.nome) + ' <span class="tb-chip-mun-super">(' + esc(m.super) + ')</span>' +
+          '<button type="button" class="tb-chip-remove" data-remove-mun="' + esc(m.nome) + '" title="Remover ' + esc(m.nome) + '">&times;</button>' +
+        '</span>';
+      });
+      chipsEl.innerHTML = chipsHtml;
+    }
+
+    // Renderizar Seção 2: Cards dos Órgãos e Responsáveis Regionais
+    var gridEl = document.getElementById('tb-orgs-grid');
+    if (gridEl) {
+      var cardsHtml = '';
+
+      function renderCard(orgaoNome, titulo, cor, icone, divisaoNome, rotuloDiv, munsList) {
+        var h = '<div class="tb-org-card">';
+        h += '  <div class="tb-org-header" style="background-color: ' + cor + ';">';
+        h += '    <div class="tb-org-header-title">';
+        h += '      <i class="bi ' + icone + '"></i>';
+        h += '      <span>' + esc(orgaoNome) + '</span>';
+        h += '    </div>';
+        h += '    <span class="tb-org-divisao-badge">' + esc(divisaoNome) + '</span>';
+        h += '  </div>';
+        h += '  <div class="tb-org-body">';
+        h += '    <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">' + esc(titulo) + ' • ' + esc(rotuloDiv) + ': <strong>' + esc(divisaoNome) + '</strong></div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-person-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Responsável:</span>';
+        h += '      <span class="tb-contact-val tb-placeholder-text">Informação não cadastrada</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-briefcase-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Cargo:</span>';
+        h += '      <span class="tb-contact-val tb-placeholder-text">Informação não cadastrada</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-telephone-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Telefone:</span>';
+        h += '      <span class="tb-contact-val tb-placeholder-text">Informação não cadastrada</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-envelope-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">E-mail:</span>';
+        h += '      <span class="tb-contact-val tb-placeholder-text">Informação não cadastrada</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-geo-alt-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Sede:</span>';
+        h += '      <span class="tb-contact-val tb-placeholder-text">Informação não cadastrada</span>';
+        h += '    </div>';
+        h += '    <div class="tb-org-footer-muns">';
+        h += '      <strong>Municípios abrangidos (' + munsList.length + '):</strong>';
+        h += '      <div class="tb-muns-chips-container">';
+        munsList.forEach(function(nm) {
+          h += '<span class="tb-chip-mun">' + esc(nm) + '</span>';
+        });
+        h += '      </div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '</div>';
+        return h;
+      }
+
+      // 1. DER-SP
+      Object.keys(dersMap).sort().forEach(function(dr) {
+        cardsHtml += renderCard('DER-SP', 'Departamento de Estradas de Rodagem', '#005CA8', 'bi-signpost-split-fill', dr, 'Divisão Regional', dersMap[dr]);
+      });
+
+      // 2. PMESP
+      Object.keys(pmsMap).sort().forEach(function(pm) {
+        cardsHtml += renderCard('PMESP', 'Polícia Militar do Estado de SP', '#1e293b', 'bi-shield-shaded', pm, 'Comando Regional', pmsMap[pm]);
+      });
+
+      // 3. SES-SP
+      Object.keys(sesMap).sort().forEach(function(ses) {
+        cardsHtml += renderCard('SES-SP', 'Secretaria de Estado da Saúde', '#059669', 'bi-heart-pulse-fill', ses, 'Regional DRS', sesMap[ses]);
+      });
+
+      // 4. PRF
+      if (prfMuns.length > 0) {
+        cardsHtml += renderCard('PRF', 'Polícia Rodoviária Federal', '#b45309', 'bi-cone-striped', 'Delegacia PRF / SP', 'Jurisdição Federal', prfMuns);
+      }
+
+      gridEl.innerHTML = cardsHtml;
+    }
   }
 
   function initEventos() {
@@ -2154,9 +2404,99 @@ cat('
       });
     }
 
-    var btnCsv = document.getElementById('btn-exportar-csv');
-    if (btnCsv) {
-      btnCsv.addEventListener('click', exportarCSV);
+    var btnXlsx = document.getElementById('btn-exportar-xlsx');
+    if (btnXlsx) {
+      btnXlsx.addEventListener('click', exportarXLSX);
+    }
+
+    // Seleção de linhas e checkboxes na tabela
+    var corpoTabela = document.getElementById('tabela-municipios-corpo');
+    if (corpoTabela) {
+      corpoTabela.addEventListener('click', function(e) {
+        if (e.target.closest('.tb-btn-mapa')) return;
+
+        var tr = e.target.closest('tr');
+        if (!tr) return;
+        var nome = tr.getAttribute('data-nome');
+        if (!nome) return;
+
+        var cb = e.target.closest('.check-mun');
+        if (cb) {
+          if (cb.checked) {
+            municipiosSelecionados.add(nome);
+            tr.classList.add('tr-selected');
+          } else {
+            municipiosSelecionados.delete(nome);
+            tr.classList.remove('tr-selected');
+          }
+        } else {
+          if (municipiosSelecionados.has(nome)) {
+            municipiosSelecionados.delete(nome);
+            tr.classList.remove('tr-selected');
+            var cEl = tr.querySelector('.check-mun');
+            if (cEl) cEl.checked = false;
+          } else {
+            municipiosSelecionados.add(nome);
+            tr.classList.add('tr-selected');
+            var cEl = tr.querySelector('.check-mun');
+            if (cEl) cEl.checked = true;
+          }
+        }
+        atualizarMasterCheck();
+        atualizarGaveta();
+      });
+    }
+
+    var checkTodos = document.getElementById('check-todos-municipios');
+    if (checkTodos) {
+      checkTodos.addEventListener('click', function() {
+        var marcar = this.checked;
+        municipiosFiltrados.forEach(function(m) {
+          if (marcar) {
+            municipiosSelecionados.add(m.nome);
+          } else {
+            municipiosSelecionados.delete(m.nome);
+          }
+        });
+        renderizarTabela();
+        atualizarGaveta();
+      });
+    }
+
+    // Controle da Gaveta Inferior
+    var drawerBar = document.getElementById('tb-drawer-bar');
+    if (drawerBar) {
+      drawerBar.addEventListener('click', function(e) {
+        if (e.target.closest('#btn-drawer-clear')) return;
+        gavetaExpandida = !gavetaExpandida;
+        atualizarGaveta();
+      });
+    }
+
+    var btnDrawerClear = document.getElementById('btn-drawer-clear');
+    if (btnDrawerClear) {
+      btnDrawerClear.addEventListener('click', function(e) {
+        e.stopPropagation();
+        municipiosSelecionados.clear();
+        gavetaExpandida = false;
+        atualizarGaveta();
+        renderizarTabela();
+      });
+    }
+
+    var drawerContent = document.getElementById('tb-drawer-content');
+    if (drawerContent) {
+      drawerContent.addEventListener('click', function(e) {
+        var btnRem = e.target.closest('[data-remove-mun]');
+        if (btnRem) {
+          var nomeMun = btnRem.getAttribute('data-remove-mun');
+          if (nomeMun) {
+            municipiosSelecionados.delete(nomeMun);
+            atualizarGaveta();
+            renderizarTabela();
+          }
+        }
+      });
     }
   }
 

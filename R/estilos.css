@@ -102,10 +102,11 @@ h1, h2, h3, h4, h5, h6 {
   gap: 10px;
 }
 
+.tb-btn-xlsx,
 .tb-btn-csv {
-  background-color: #00875a;
+  background-color: #107c41;
   color: #ffffff !important;
-  border: 1px solid #00704a;
+  border: 1px solid #0e6b37;
   border-radius: 6px;
   padding: 8px 16px;
   font-size: 13px !important;
@@ -117,9 +118,10 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
+.tb-btn-xlsx:hover,
 .tb-btn-csv:hover {
-  background-color: #006644;
-  border-color: #005035;
+  background-color: #0b5a2f;
+  border-color: #084323;
 }
 
 .tb-btn-clear {
@@ -644,6 +646,386 @@ h1, h2, h3, h4, h5, h6 {
 th.th-sorted {
   background-color: #e2e8f0 !important;
   color: #004077 !important;
+}
+
+/* Checkbox de Seleção na Tabela */
+.tb-checkbox {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: #004077;
+  margin: 0;
+  vertical-align: middle;
+}
+
+tr.tr-selected {
+  background-color: #eaf4fc !important;
+  border-left: 3px solid #005ca8 !important;
+}
+
+tr.tr-selected:hover {
+  background-color: #dbeafe !important;
+}
+
+/* Gaveta Inferior Retrátil (Bottom Drawer) */
+.tb-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1060;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-top: 3px solid #004077;
+  box-shadow: 0 -6px 25px rgba(0, 32, 64, 0.2);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(100%);
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.tb-drawer.is-visible {
+  transform: translateY(0);
+}
+
+/* Barra Flutuante de Resumo (Header da Gaveta) */
+.tb-drawer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: linear-gradient(90deg, #00284d 0%, #004077 100%);
+  color: #ffffff;
+  user-select: none;
+}
+
+.tb-drawer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+}
+
+.tb-drawer-badge {
+  background: #38bdf8;
+  color: #00284d;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.tb-drawer-subinfo {
+  color: #cbd5e1;
+  font-size: 12.5px;
+}
+
+.tb-drawer-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tb-btn-drawer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #004077;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tb-btn-drawer-toggle:hover {
+  background: #e0f2fe;
+}
+
+.tb-btn-drawer-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: #fca5a5;
+  border: 1px solid rgba(254, 202, 202, 0.4);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tb-btn-drawer-clear:hover {
+  background: rgba(220, 38, 38, 0.2);
+  color: #ffffff;
+  border-color: #f87171;
+}
+
+/* Painel de Conteúdo da Gaveta (Expandido) */
+.tb-drawer-content {
+  display: none;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #f8fafc;
+  padding: 16px 24px;
+}
+
+.tb-drawer.is-expanded .tb-drawer-content {
+  display: block;
+}
+
+/* Seção 1: Lista Extensa de Municípios Selecionados */
+.tb-drawer-muns-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tb-drawer-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #00284d;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tb-drawer-section-title i {
+  color: #004077;
+  font-size: 15px;
+}
+
+.tb-drawer-muns-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.tb-chip-mun-extensive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.tb-chip-mun-extensive:hover {
+  background-color: #e2e8f0;
+}
+
+.tb-chip-mun-super {
+  color: #64748b;
+  font-weight: normal;
+  font-size: 11px;
+}
+
+/* Seção 2: Órgãos e Responsáveis Regionais */
+.tb-drawer-orgs-section {
+  margin-top: 4px;
+}
+
+/* Grid de Cards dos Órgãos */
+.tb-orgs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.tb-org-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.tb-org-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.tb-org-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.tb-org-body {
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-contact-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tb-contact-icon {
+  color: #64748b;
+  width: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.tb-contact-label {
+  font-weight: 700;
+  color: #475569;
+  min-width: 80px;
+  font-size: 11.5px;
+}
+
+.tb-contact-val {
+  color: #1e293b;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.tb-placeholder-text {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.tb-org-footer-muns {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.tb-muns-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tb-chip-mun {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e2e8f0;
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+
+.tb-chip-remove {
+  cursor: pointer;
+  color: #64748b;
+  border: none;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+  font-size: 12px;
+}
+
+.tb-chip-remove:hover {
+  color: #dc2626;
+}
+
+/* Botão de Destaque da Lista de Priorização no Mapa Dinâmico */
+.mdn-btn-toggle-prio {
+  background: #00284d;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  box-shadow: 0 4px 14px rgba(0, 40, 119, 0.35);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.mdn-btn-toggle-prio:hover {
+  background: #003e7e;
+  box-shadow: 0 6px 18px rgba(0, 40, 119, 0.45);
+  transform: translateY(-1px);
+}
+
+.mdn-prio-badge {
+  background: #f59e0b;
+  color: #78350f;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 2px;
+}
+
+/* Legenda do Mapa Dinâmico */
+.mdn-leg {
+  width: max-content;
+  min-width: 320px;
+  max-width: min(480px, calc(100vw - 40px));
+  max-height: 55vh;
+  overflow: auto;
+  font-size: 13.5px;
+}
+
+.mdn-leg .mdn-tit {
+  font-size: 15px;
+}
+
+.mdn-it {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 
