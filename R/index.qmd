@@ -249,13 +249,14 @@ function(el, x, data) {
     // Nível de apoio: valores discretos em gradação de azul. Os municípios sem adesão ao
     // SISTRAN aparecem hachurados.
     {grupo:'Apoio para campanha', id:'nivel', nome:'Nível de apoio', campo:'nivel_apoio', titulo:'Nível de apoio',
-     desc:'Construído a partir da adesão ao SNT, das ações de fiscalização e das abordagens educativas',
+     desc:'Condições de integração, autonomia e demanda de apoio para campanha',
      fixas:{
-       'Realiza sozinho': '#D0E5F5',
+       'Autonomia completa': '#D0E5F5',
        'Apoio em Fiscalização': '#72B3E8',
-       'Apoio em Educação': '#3F8FD2',
-       'Apoio completo': '#005CA8',
-       'Sem adesão ao SNT': '#004077'
+       'Apoio em Educação': '#2b7bc4',
+       'Apoio em Educação/Fiscalização': '#005CA8',
+       'Apoio em Educação sem SNT': '#475569',
+       'Apoio em Educação/Fiscalização sem SNT': '#004077'
      }},
     {grupo:'Apoio para campanha', id:'snt',   nome:'Adesão ao SNT',        campo:'snt',        titulo:'Adesão ao SNT',
      cor:'#005CA8', rot:ROT_SIMNAO},
@@ -307,18 +308,20 @@ function(el, x, data) {
   // Valor (texto) de um município em um tema
   function valorDe(p, t) {
     if (t.id === 'nivel') {
-      var v = p[t.campo];
-      if (t.fixas && t.fixas[v]) return v;
-      var nv = Math.round(+v);
-      if (nv === 1) return 'Realiza sozinho';
-      if (nv === 2) {
-        var ac = norm(p.acoes);
-        if (ac === 'sim') return 'Apoio em Fiscalização';
-        return 'Apoio em Educação';
+      if (semAdesao(p)) return 'Não está aderido ao Sistran';
+      var temSnt = (norm(p.snt) === 'sim');
+      var fazAcoes = (norm(p.acoes) === 'sim');
+      var fazAbord = (norm(p.abordagens) === 'sim');
+
+      if (temSnt) {
+        if (fazAcoes && fazAbord) return 'Autonomia completa';
+        if (fazAcoes && !fazAbord) return 'Apoio em Educação';
+        if (!fazAcoes && fazAbord) return 'Apoio em Fiscalização';
+        return 'Apoio em Educação/Fiscalização';
+      } else {
+        if (fazAcoes) return 'Apoio em Educação sem SNT';
+        return 'Apoio em Educação/Fiscalização sem SNT';
       }
-      if (nv === 3) return 'Apoio completo';
-      if (nv === 4) return 'Sem adesão ao SNT';
-      return SEM_INFO;
     }
     var v = p[t.campo];
     if (t.grad) return (v === null || v === undefined || v === '' || isNaN(+v)) ? SEM_INFO : +v;
@@ -712,7 +715,7 @@ function(el, x, data) {
 
   function htmlPopup(p) {
     var isSem = semAdesao(p);
-    var nivelTxt = isSem ? 'Sem adesão ao SISTRAN' : valorDe(p, TEMAS[0]);
+    var nivelTxt = isSem ? 'Não está aderido ao Sistran' : valorDe(p, TEMAS[0]);
     var h = '<b>Município:</b> ' + esc(p.nome) +
             '<br><b>Superintendência:</b> ' + esc(p.super) +
             '<br><b>Nível de apoio:</b> ' + esc(nivelTxt);
@@ -938,7 +941,7 @@ function(el, x, data) {
                   TEMA.binario ? rotuloValor(TEMA, v) : v, cont[v] || 0, String(v));
       }
     });
-    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Sem adesão ao SISTRAN', nSem, '__SEM_ADESAO__');
+    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Não está aderido ao Sistran', nSem, '__SEM_ADESAO__');
 
     if (filtrosLegenda.size > 0) {
       h += '<div class="mdn-leg-limpar">' +
@@ -961,30 +964,27 @@ function(el, x, data) {
   var munSelecionadoCard = null;
 
   function deveIgnorar(p) {
-    // Ignora municípios sem adesão ao SNT
-    if (norm(p.snt) === 'nao') return true;
+    if (semAdesao(p)) return true;
     var nv = valorDe(p, TEMAS[0]);
-    if (nv === 'Sem adesão ao SNT') return true;
-
-    // Ignora municípios que realizam sozinho
-    if (nv === 'Realiza sozinho') return true;
+    if (nv === 'Não está aderido ao Sistran' || nv === 'Autonomia completa') return true;
     if (norm(p.acoes) === 'sim' && norm(p.abordagens) === 'sim') return true;
-
     return false;
   }
 
   function rankingNivel(p) {
-    var nv = norm(valorDe(p, TEMAS[0]));
-    if (nv.indexOf('apoio completo') !== -1) return 1;
-    if (nv.indexOf('educacao') !== -1) return 2;
-    if (nv.indexOf('fiscalizacao') !== -1) return 3;
-    return 4;
+    var nv = valorDe(p, TEMAS[0]);
+    if (nv === 'Apoio em Educação/Fiscalização sem SNT') return 1;
+    if (nv === 'Apoio em Educação sem SNT') return 2;
+    if (nv === 'Apoio em Educação/Fiscalização') return 3;
+    if (nv === 'Apoio em Educação') return 4;
+    if (nv === 'Apoio em Fiscalização') return 5;
+    return 6;
   }
 
   function compararPrioridade(a, b) {
     var pa = a.properties, pb = b.properties;
 
-    // 1º Nível: Apoio Completo -> Apoio em Educação -> Apoio em Fiscalização
+    // 1º Nível: Quanto menos estrutura, maior a prioridade
     var rA = rankingNivel(pa), rB = rankingNivel(pb);
     if (rA !== rB) return rA - rB;
 
@@ -1003,22 +1003,22 @@ function(el, x, data) {
 
   function calcularScore(p) {
     var r = rankingNivel(p);
-    var base = (4 - r) * 10;
+    var base = (7 - r) * 10;
     var ob = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? +p.prop_obitos : 0;
     var sin = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? +p.prop_sinistros : 0;
     return base + (ob * 0.6) + (sin * 0.4);
   }
 
   function estiloBadgeNivel(nivelTxt, isSemAdesao) {
-    if (isSemAdesao) {
-      return 'background:#6E6E6E;color:#FFFFFF;';
+    if (isSemAdesao || nivelTxt === 'Não está aderido ao Sistran') {
+      return 'background:#6E6E6E;color:#FFFFFF;border:1px solid #555555;';
     }
-    var n = norm(nivelTxt);
-    if (n.indexOf('sozinho') !== -1) return 'background:#D0E5F5;color:#004077;border:1px solid #A4CFED;';
-    if (n.indexOf('fiscalizacao') !== -1) return 'background:#72B3E8;color:#002F59;';
-    if (n.indexOf('educacao') !== -1) return 'background:#3F8FD2;color:#FFFFFF;';
-    if (n.indexOf('completo') !== -1) return 'background:#005CA8;color:#FFFFFF;';
-    if (n.indexOf('snt') !== -1) return 'background:#004077;color:#FFFFFF;';
+    if (nivelTxt === 'Autonomia completa') return 'background:#D0E5F5;color:#073860;border:1px solid #a3cbe8;';
+    if (nivelTxt === 'Apoio em Fiscalização') return 'background:#72B3E8;color:#05243e;border:1px solid #4a9ede;';
+    if (nivelTxt === 'Apoio em Educação') return 'background:#2b7bc4;color:#FFFFFF;border:1px solid #2365a1;';
+    if (nivelTxt === 'Apoio em Educação/Fiscalização') return 'background:#005CA8;color:#FFFFFF;border:1px solid #00457d;';
+    if (nivelTxt === 'Apoio em Educação sem SNT') return 'background:#475569;color:#FFFFFF;border:1px solid #334155;';
+    if (nivelTxt === 'Apoio em Educação/Fiscalização sem SNT') return 'background:#004077;color:#FFFFFF;border:1px solid #002a4e;';
     return 'background:#C4C4C4;color:#333333;';
   }
 
@@ -1264,7 +1264,7 @@ function(el, x, data) {
     feats.forEach(function(f, idx) {
       var p = f.properties;
       var isSem = semAdesao(p);
-      var nivelTxt = isSem ? 'Sem adesão ao SISTRAN' : valorDe(p, TEMAS[0]);
+      var nivelTxt = isSem ? 'Não está aderido ao Sistran' : valorDe(p, TEMAS[0]);
       var badgeStyle = estiloBadgeNivel(nivelTxt, isSem);
 
       var obVal = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? (+p.prop_obitos).toFixed(1) + '%' : '0.0%';
@@ -1402,12 +1402,13 @@ cat('
             <label class="tb-label" for="filtro-nivel">Nível de Apoio</label>
             <select id="filtro-nivel" class="tb-select">
               <option value="">Todos os Níveis de Apoio</option>
-              <option value="Apoio completo">Apoio completo</option>
+              <option value="Apoio em Educação/Fiscalização sem SNT">Apoio em Educação/Fiscalização sem SNT</option>
+              <option value="Apoio em Educação sem SNT">Apoio em Educação sem SNT</option>
+              <option value="Apoio em Educação/Fiscalização">Apoio em Educação/Fiscalização</option>
               <option value="Apoio em Educação">Apoio em Educação</option>
               <option value="Apoio em Fiscalização">Apoio em Fiscalização</option>
-              <option value="Realiza sozinho">Realiza sozinho</option>
-              <option value="Sem adesão ao SNT">Sem adesão ao SNT</option>
-              <option value="Sem adesão ao SISTRAN">Sem adesão ao SISTRAN</option>
+              <option value="Autonomia completa">Autonomia completa</option>
+              <option value="Não está aderido ao Sistran">Não está aderido ao Sistran</option>
             </select>
           </div>
           <div class="tb-field">
@@ -1418,6 +1419,57 @@ cat('
               <option value="NÃO">Não (Sem adesão)</option>
             </select>
           </div>
+        </div>
+
+        <!-- Linha Dedicada de Ordenação Multicritério -->
+        <div class="tb-sort-row">
+          <div class="tb-sort-lead">
+            <i class="bi bi-arrow-down-up"></i> <strong>Classificar por:</strong>
+          </div>
+
+          <!-- 1º Critério -->
+          <div class="tb-sort-item">
+            <span class="tb-sort-badge">1º</span>
+            <select id="select-ordem-1" class="tb-sort-select">
+              <option value="nome" selected>Município</option>
+              <option value="super">Superintendência</option>
+              <option value="nivel">Nível de Apoio</option>
+              <option value="obitos">% Óbitos</option>
+              <option value="sinistros">% Sinistros</option>
+              <option value="snt">SNT</option>
+              <option value="der">DER</option>
+              <option value="saude">SES (DRS)</option>
+              <option value="pm">Polícia Militar</option>
+            </select>
+            <button type="button" id="btn-ordem-dir-1" class="tb-btn-sort-dir" title="Clique para alternar entre Crescente e Decrescente">
+              <i class="bi bi-arrow-up" id="icon-ordem-dir-1"></i> <span id="txt-ordem-dir-1">Crescente</span>
+            </button>
+          </div>
+
+          <!-- 2º Critério (Opcional) -->
+          <div class="tb-sort-item">
+            <span class="tb-sort-badge">2º</span>
+            <select id="select-ordem-2" class="tb-sort-select">
+              <option value="" selected>(Nenhum - Desativado)</option>
+              <option value="nome">Município</option>
+              <option value="super">Superintendência</option>
+              <option value="nivel">Nível de Apoio</option>
+              <option value="obitos">% Óbitos</option>
+              <option value="sinistros">% Sinistros</option>
+              <option value="snt">SNT</option>
+              <option value="der">DER</option>
+              <option value="saude">SES (DRS)</option>
+              <option value="pm">Polícia Militar</option>
+            </select>
+            <button type="button" id="btn-ordem-dir-2" class="tb-btn-sort-dir is-disabled" title="Clique para alternar entre Crescente e Decrescente" disabled>
+              <i class="bi bi-arrow-up" id="icon-ordem-dir-2"></i> <span id="txt-ordem-dir-2">Crescente</span>
+            </button>
+          </div>
+
+          <!-- Botão Restaurar Ordem Padrão -->
+          <button type="button" id="btn-reset-ordem" class="tb-btn-reset-sort-clean" title="Restaurar ordenação alfabética (Município A-Z)">
+            <i class="bi bi-arrow-counterclockwise"></i> Ordem Padrão
+          </button>
         </div>
       </div>
     </div>
@@ -1443,31 +1495,31 @@ cat('
       <table id="tabela-municipios">
         <thead>
           <tr>
-            <th scope="col" class="sortable-th" data-col="nome" onclick="window.ordenarPorColuna('nome')" style="width: 17%; cursor: pointer;">
-              Município <span class="tb-sort-icon">↕</span>
+            <th scope="col" class="sortable-th" data-col="nome" onclick="window.ordenarPorColuna('nome')" style="width: 17%; cursor: pointer;" title="Clique para ordenar por Município">
+              Município <span class="tb-sort-icon">▲</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="super" onclick="window.ordenarPorColuna('super')" style="width: 14%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="super" onclick="window.ordenarPorColuna('super')" style="width: 14%; cursor: pointer;" title="Clique para ordenar por Superintendência">
               Superintendência <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="nivel" onclick="window.ordenarPorColuna('nivel')" style="text-align: center; width: 14%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="nivel" onclick="window.ordenarPorColuna('nivel')" style="text-align: center; width: 14%; cursor: pointer;" title="Clique para ordenar por Nível de Apoio">
               Nível de Apoio <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="obitos" onclick="window.ordenarPorColuna('obitos')" style="text-align: right; width: 9%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="obitos" onclick="window.ordenarPorColuna('obitos')" style="text-align: right; width: 9%; cursor: pointer;" title="Clique para ordenar por % Óbitos">
               % Óbitos <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="sinistros" onclick="window.ordenarPorColuna('sinistros')" style="text-align: right; width: 9%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="sinistros" onclick="window.ordenarPorColuna('sinistros')" style="text-align: right; width: 9%; cursor: pointer;" title="Clique para ordenar por % Sinistros">
               % Sinistros <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="snt" onclick="window.ordenarPorColuna('snt')" style="text-align: center; width: 8%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="snt" onclick="window.ordenarPorColuna('snt')" style="text-align: center; width: 8%; cursor: pointer;" title="Clique para ordenar por Adesão ao SNT">
               SNT <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="der" onclick="window.ordenarPorColuna('der')" style="width: 7%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="der" onclick="window.ordenarPorColuna('der')" style="width: 7%; cursor: pointer;" title="Clique para ordenar por DER">
               DER <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="saude" onclick="window.ordenarPorColuna('saude')" style="width: 8%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="saude" onclick="window.ordenarPorColuna('saude')" style="width: 8%; cursor: pointer;" title="Clique para ordenar por SES (DRS)">
               SES (DRS) <span class="tb-sort-icon">↕</span>
             </th>
-            <th scope="col" class="sortable-th" data-col="pm" onclick="window.ordenarPorColuna('pm')" style="width: 8%; cursor: pointer;">
+            <th scope="col" class="sortable-th" data-col="pm" onclick="window.ordenarPorColuna('pm')" style="width: 8%; cursor: pointer;" title="Clique para ordenar por PMESP">
               PMESP <span class="tb-sort-icon">↕</span>
             </th>
             <th scope="col" style="text-align: center; width: 9%;">
@@ -1502,19 +1554,20 @@ cat('
   var municipiosFiltrados = [];
   var paginaAtual = 1;
   var itensPorPagina = 25;
-  var colunaOrdenacao = 'nome';
-  var direcaoOrdenacao = 'asc';
+  var ordem1 = { col: 'nome', dir: 'asc' };
+  var ordem2 = { col: '', dir: 'asc' };
   var eventosIniciados = false;
   var ultimoClickSort = 0;
 
   var pesosNivel = {
-    'Apoio completo': 1,
-    'Apoio em Educação': 2,
-    'Apoio em Fiscalização': 3,
-    'Realiza sozinho': 4,
-    'Sem adesão ao SNT': 5,
-    'Sem adesão ao SISTRAN': 6,
-    'Sem informação': 7
+    'Apoio em Educação/Fiscalização sem SNT': 1,
+    'Apoio em Educação sem SNT': 2,
+    'Apoio em Educação/Fiscalização': 3,
+    'Apoio em Educação': 4,
+    'Apoio em Fiscalização': 5,
+    'Autonomia completa': 6,
+    'Não está aderido ao Sistran': 7,
+    'Sem informação': 8
   };
 
   function norm(s) {
@@ -1529,28 +1582,31 @@ cat('
   }
 
   function getCategoriaNivel(p) {
-    var v = p.nivel_apoio;
-    var nv = (v !== null && v !== undefined && !isNaN(+v)) ? Math.round(+v) : null;
-    if (nv === 1) return 'Realiza sozinho';
-    if (nv === 2) {
-      var ac = norm(p.acoes);
-      if (ac === 'sim') return 'Apoio em Fiscalização';
-      return 'Apoio em Educação';
+    if (p.sem_adesao == 1) return 'Não está aderido ao Sistran';
+    var temSnt = (norm(p.snt) === 'sim');
+    var fazAcoes = (norm(p.acoes) === 'sim');
+    var fazAbord = (norm(p.abordagens) === 'sim');
+
+    if (temSnt) {
+      if (fazAcoes && fazAbord) return 'Autonomia completa';
+      if (fazAcoes && !fazAbord) return 'Apoio em Educação';
+      if (!fazAcoes && fazAbord) return 'Apoio em Fiscalização';
+      return 'Apoio em Educação/Fiscalização';
+    } else {
+      if (fazAcoes) return 'Apoio em Educação sem SNT';
+      return 'Apoio em Educação/Fiscalização sem SNT';
     }
-    if (nv === 3) return 'Apoio completo';
-    if (nv === 4) return 'Sem adesão ao SNT';
-    if (p.sem_adesao == 1) return 'Sem adesão ao SISTRAN';
-    return 'Sem informação';
   }
 
   function getBadgeNivel(cat) {
     var styles = {
-      'Realiza sozinho': 'background-color: #D0E5F5; color: #073860; border: 1px solid #a3cbe8;',
+      'Autonomia completa': 'background-color: #D0E5F5; color: #073860; border: 1px solid #a3cbe8;',
       'Apoio em Fiscalização': 'background-color: #72B3E8; color: #05243e; border: 1px solid #4a9ede;',
       'Apoio em Educação': 'background-color: #2b7bc4; color: #ffffff; border: 1px solid #2365a1;',
-      'Apoio completo': 'background-color: #005CA8; color: #ffffff; border: 1px solid #00457d;',
-      'Sem adesão ao SNT': 'background-color: #004077; color: #ffffff; border: 1px solid #002a4e;',
-      'Sem adesão ao SISTRAN': 'background-color: #6E6E6E; color: #ffffff; border: 1px solid #555555;',
+      'Apoio em Educação/Fiscalização': 'background-color: #005CA8; color: #ffffff; border: 1px solid #00457d;',
+      'Apoio em Educação sem SNT': 'background-color: #475569; color: #ffffff; border: 1px solid #334155;',
+      'Apoio em Educação/Fiscalização sem SNT': 'background-color: #004077; color: #ffffff; border: 1px solid #002a4e;',
+      'Não está aderido ao Sistran': 'background-color: #6E6E6E; color: #ffffff; border: 1px solid #555555;',
       'Sem informação': 'background-color: #94a3b8; color: #ffffff;'
     };
     var s = styles[cat] || styles['Sem informação'];
@@ -1639,92 +1695,123 @@ cat('
     renderizarTabela();
   }
 
-  function ordenarDados() {
-    municipiosFiltrados.sort(function(a, b) {
-      if (colunaOrdenacao === 'nome') {
-        var r = a.nome.localeCompare(b.nome, 'pt-BR');
-        return (direcaoOrdenacao === 'asc') ? r : -r;
-      }
-      if (colunaOrdenacao === 'super') {
-        var r = a.super.localeCompare(b.super, 'pt-BR');
-        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'nivel') {
-        var pA = pesosNivel[a.categoriaNivel] || 99;
-        var pB = pesosNivel[b.categoriaNivel] || 99;
-        if (pA !== pB) return (direcaoOrdenacao === 'asc') ? (pA - pB) : (pB - pA);
-        var oA = (a.prop_obitos !== null) ? a.prop_obitos : -1;
-        var oB = (b.prop_obitos !== null) ? b.prop_obitos : -1;
-        if (oA !== oB) return oB - oA;
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'obitos') {
-        var vA = (a.prop_obitos !== null && !isNaN(a.prop_obitos)) ? a.prop_obitos : -1;
-        var vB = (b.prop_obitos !== null && !isNaN(b.prop_obitos)) ? b.prop_obitos : -1;
-        if (vA !== vB) return (direcaoOrdenacao === 'asc') ? (vA - vB) : (vB - vA);
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'sinistros') {
-        var vA = (a.prop_sinistros !== null && !isNaN(a.prop_sinistros)) ? a.prop_sinistros : -1;
-        var vB = (b.prop_sinistros !== null && !isNaN(b.prop_sinistros)) ? b.prop_sinistros : -1;
-        if (vA !== vB) return (direcaoOrdenacao === 'asc') ? (vA - vB) : (vB - vA);
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'snt') {
-        var r = a.snt.localeCompare(b.snt);
-        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'der') {
-        var r = a.der.localeCompare(b.der, 'pt-BR');
-        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'saude') {
-        var r = a.saude.localeCompare(b.saude, 'pt-BR');
-        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      if (colunaOrdenacao === 'pm') {
-        var r = a.pm.localeCompare(b.pm, 'pt-BR');
-        if (r !== 0) return (direcaoOrdenacao === 'asc') ? r : -r;
-        return a.nome.localeCompare(b.nome, 'pt-BR');
-      }
-      return 0;
-    });
-
-    atualizarIconesOrdenacao();
+  function compararPorRegra(a, b, col, dir) {
+    var r = 0;
+    if (col === 'nome') {
+      r = a.nome.localeCompare(b.nome, 'pt-BR');
+    } else if (col === 'super') {
+      r = a.super.localeCompare(b.super, 'pt-BR');
+    } else if (col === 'nivel') {
+      var pA = pesosNivel[a.categoriaNivel] || 99;
+      var pB = pesosNivel[b.categoriaNivel] || 99;
+      r = pA - pB;
+    } else if (col === 'obitos') {
+      var oA = (a.prop_obitos !== null && !isNaN(a.prop_obitos)) ? a.prop_obitos : -1;
+      var oB = (b.prop_obitos !== null && !isNaN(b.prop_obitos)) ? b.prop_obitos : -1;
+      r = oA - oB;
+    } else if (col === 'sinistros') {
+      var sA = (a.prop_sinistros !== null && !isNaN(a.prop_sinistros)) ? a.prop_sinistros : -1;
+      var sB = (b.prop_sinistros !== null && !isNaN(b.prop_sinistros)) ? b.prop_sinistros : -1;
+      r = sA - sB;
+    } else if (col === 'snt') {
+      r = (a.snt || '').localeCompare(b.snt || '', 'pt-BR');
+    } else if (col === 'der') {
+      r = (a.der || '').localeCompare(b.der || '', 'pt-BR');
+    } else if (col === 'saude') {
+      r = (a.saude || '').localeCompare(b.saude || '', 'pt-BR');
+    } else if (col === 'pm') {
+      r = (a.pm || '').localeCompare(b.pm || '', 'pt-BR');
+    }
+    return (dir === 'asc') ? r : -r;
   }
 
-  function atualizarIconesOrdenacao() {
+  function ordenarDados() {
+    municipiosFiltrados.sort(function(a, b) {
+      var diff1 = compararPorRegra(a, b, ordem1.col, ordem1.dir);
+      if (diff1 !== 0) return diff1;
+      if (ordem2.col && ordem2.col !== ordem1.col) {
+        var diff2 = compararPorRegra(a, b, ordem2.col, ordem2.dir);
+        if (diff2 !== 0) return diff2;
+      }
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+
+    atualizarUIOrdenacao();
+  }
+
+  function atualizarUIOrdenacao() {
+    var sel1 = document.getElementById('select-ordem-1');
+    if (sel1 && sel1.value !== ordem1.col) sel1.value = ordem1.col;
+
+    var txt1 = document.getElementById('txt-ordem-dir-1');
+    var icon1 = document.getElementById('icon-ordem-dir-1');
+    if (txt1) txt1.textContent = (ordem1.dir === 'asc') ? 'Crescente' : 'Decrescente';
+    if (icon1) icon1.className = (ordem1.dir === 'asc') ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+
+    var sel2 = document.getElementById('select-ordem-2');
+    if (sel2 && sel2.value !== ordem2.col) sel2.value = ordem2.col;
+
+    var btn2 = document.getElementById('btn-ordem-dir-2');
+    var txt2 = document.getElementById('txt-ordem-dir-2');
+    var icon2 = document.getElementById('icon-ordem-dir-2');
+
+    if (btn2) {
+      if (!ordem2.col) {
+        btn2.disabled = true;
+        btn2.classList.add('is-disabled');
+        if (txt2) txt2.textContent = 'Crescente';
+        if (icon2) icon2.className = 'bi bi-arrow-up';
+      } else {
+        btn2.disabled = false;
+        btn2.classList.remove('is-disabled');
+        if (txt2) txt2.textContent = (ordem2.dir === 'asc') ? 'Crescente' : 'Decrescente';
+        if (icon2) icon2.className = (ordem2.dir === 'asc') ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+      }
+    }
+
     document.querySelectorAll('#tabela-municipios th[data-col]').forEach(function(th) {
       var col = th.getAttribute('data-col');
       var icon = th.querySelector('.tb-sort-icon');
       if (!icon) return;
-      if (col === colunaOrdenacao) {
-        icon.textContent = (direcaoOrdenacao === 'asc') ? ' ▲' : ' ▼';
-        icon.className = 'tb-sort-icon tb-sort-active';
+
+      if (col === ordem1.col) {
+        var arrow = (ordem1.dir === 'asc') ? ' ▲' : ' ▼';
+        icon.innerHTML = '<span class="tb-sort-active">' + arrow + '</span>';
         th.style.backgroundColor = '#002e56';
+      } else if (ordem2.col && col === ordem2.col) {
+        var arrow = (ordem2.dir === 'asc') ? ' ▲' : ' ▼';
+        icon.innerHTML = '<span class="tb-sort-second">' + arrow + ' <small>(2º)</small></span>';
+        th.style.backgroundColor = '#0b4d82';
       } else {
-        icon.textContent = ' ↕';
-        icon.className = 'tb-sort-icon';
+        icon.innerHTML = ' ↕';
         th.style.backgroundColor = '';
       }
     });
   }
+
+  window.resetarOrdenacao = function() {
+    ordem1 = { col: 'nome', dir: 'asc' };
+    ordem2 = { col: '', dir: 'asc' };
+    ordenarDados();
+    paginaAtual = 1;
+    renderizarTabela();
+  };
 
   window.ordenarPorColuna = function(col) {
     var agora = Date.now();
     if (agora - ultimoClickSort < 50) return;
     ultimoClickSort = agora;
 
-    if (col === colunaOrdenacao) {
-      direcaoOrdenacao = (direcaoOrdenacao === 'asc') ? 'desc' : 'asc';
+    if (ordem1.col === col) {
+      ordem1.dir = (ordem1.dir === 'asc') ? 'desc' : 'asc';
     } else {
-      colunaOrdenacao = col;
-      direcaoOrdenacao = (col === 'obitos' || col === 'sinistros') ? 'desc' : 'asc';
+      ordem1.col = col;
+      ordem1.dir = (col === 'obitos' || col === 'sinistros') ? 'desc' : 'asc';
+      if (ordem2.col === col) {
+        ordem2.col = '';
+      }
     }
+
     ordenarDados();
     paginaAtual = 1;
     renderizarTabela();
@@ -1985,7 +2072,64 @@ cat('
         if (superSelect) superSelect.value = '';
         if (nivelSelect) nivelSelect.value = '';
         if (sntSelect) sntSelect.value = '';
+        ordem1 = { col: 'nome', dir: 'asc' };
+        ordem2 = { col: '', dir: 'asc' };
         aplicarFiltros();
+      });
+    }
+
+    var selOrdem1 = document.getElementById('select-ordem-1');
+    if (selOrdem1) {
+      selOrdem1.addEventListener('change', function() {
+        ordem1.col = this.value;
+        ordem1.dir = (ordem1.col === 'obitos' || ordem1.col === 'sinistros') ? 'desc' : 'asc';
+        if (ordem2.col === ordem1.col) {
+          ordem2.col = '';
+        }
+        ordenarDados();
+        paginaAtual = 1;
+        renderizarTabela();
+      });
+    }
+
+    var btnDir1 = document.getElementById('btn-ordem-dir-1');
+    if (btnDir1) {
+      btnDir1.addEventListener('click', function() {
+        ordem1.dir = (ordem1.dir === 'asc') ? 'desc' : 'asc';
+        ordenarDados();
+        paginaAtual = 1;
+        renderizarTabela();
+      });
+    }
+
+    var selOrdem2 = document.getElementById('select-ordem-2');
+    if (selOrdem2) {
+      selOrdem2.addEventListener('change', function() {
+        ordem2.col = this.value;
+        if (ordem2.col) {
+          ordem2.dir = (ordem2.col === 'obitos' || ordem2.col === 'sinistros') ? 'desc' : 'asc';
+        }
+        ordenarDados();
+        paginaAtual = 1;
+        renderizarTabela();
+      });
+    }
+
+    var btnDir2 = document.getElementById('btn-ordem-dir-2');
+    if (btnDir2) {
+      btnDir2.addEventListener('click', function() {
+        if (!ordem2.col) return;
+        ordem2.dir = (ordem2.dir === 'asc') ? 'desc' : 'asc';
+        ordenarDados();
+        paginaAtual = 1;
+        renderizarTabela();
+      });
+    }
+
+    var btnResetOrdem = document.getElementById('btn-reset-ordem');
+    if (btnResetOrdem) {
+      btnResetOrdem.addEventListener('click', function() {
+        window.resetarOrdenacao();
       });
     }
 
