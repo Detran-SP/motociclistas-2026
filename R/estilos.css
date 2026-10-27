@@ -453,12 +453,12 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
-/* Ordenação Multicritério com Controles na Barra de Filtros */
+/* Ordenação Multicritério com Controles Dinâmicos */
 .tb-sort-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid #e2e8f0;
@@ -474,6 +474,14 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.tb-sort-rules-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .tb-sort-item {
@@ -484,6 +492,12 @@ h1, h2, h3, h4, h5, h6 {
   padding: 3px 6px 3px 8px;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
+  transition: all 0.15s ease;
+}
+
+.tb-sort-item:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .tb-sort-badge {
@@ -497,6 +511,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .tb-sort-select {
@@ -527,6 +542,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .tb-btn-sort-dir:hover:not(:disabled) {
@@ -535,12 +551,61 @@ h1, h2, h3, h4, h5, h6 {
   color: #002e56;
 }
 
-.tb-btn-sort-dir.is-disabled, .tb-btn-sort-dir:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  background: #f8fafc;
+.tb-btn-sort-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
   color: #94a3b8;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tb-btn-sort-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tb-sort-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tb-btn-add-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tb-btn-add-sort:hover:not(:disabled) {
+  background: #bae6fd;
+  border-color: #7dd3fc;
+  color: #0284c7;
+}
+
+.tb-btn-add-sort.is-disabled, .tb-btn-add-sort:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
   border-color: #e2e8f0;
+  color: #94a3b8;
 }
 
 .tb-btn-reset-sort-clean {
@@ -550,13 +615,13 @@ h1, h2, h3, h4, h5, h6 {
   background: transparent;
   border: 1px dashed #cbd5e1;
   color: #64748b;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
-  margin-left: auto;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .tb-btn-reset-sort-clean:hover {

@@ -9144,12 +9144,12 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
-/* Ordenação Multicritério com Controles na Barra de Filtros */
+/* Ordenação Multicritério com Controles Dinâmicos */
 .tb-sort-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid #e2e8f0;
@@ -9165,6 +9165,14 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.tb-sort-rules-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .tb-sort-item {
@@ -9175,6 +9183,12 @@ h1, h2, h3, h4, h5, h6 {
   padding: 3px 6px 3px 8px;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
+  transition: all 0.15s ease;
+}
+
+.tb-sort-item:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .tb-sort-badge {
@@ -9188,6 +9202,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .tb-sort-select {
@@ -9218,6 +9233,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .tb-btn-sort-dir:hover:not(:disabled) {
@@ -9226,12 +9242,61 @@ h1, h2, h3, h4, h5, h6 {
   color: #002e56;
 }
 
-.tb-btn-sort-dir.is-disabled, .tb-btn-sort-dir:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  background: #f8fafc;
+.tb-btn-sort-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
   color: #94a3b8;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tb-btn-sort-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tb-sort-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tb-btn-add-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tb-btn-add-sort:hover:not(:disabled) {
+  background: #bae6fd;
+  border-color: #7dd3fc;
+  color: #0284c7;
+}
+
+.tb-btn-add-sort.is-disabled, .tb-btn-add-sort:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
   border-color: #e2e8f0;
+  color: #94a3b8;
 }
 
 .tb-btn-reset-sort-clean {
@@ -9241,13 +9306,13 @@ h1, h2, h3, h4, h5, h6 {
   background: transparent;
   border: 1px dashed #cbd5e1;
   color: #64748b;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
-  margin-left: auto;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .tb-btn-reset-sort-clean:hover {
@@ -9377,55 +9442,24 @@ grid-auto-rows: minmax(0, 1fr);">
           </div>
         </div>
 
-        <!-- Linha Dedicada de Ordenação Multicritério -->
+        <!-- Linha Dedicada de Ordenação Multicritério Dinâmica -->
         <div class="tb-sort-row">
           <div class="tb-sort-lead">
             <i class="bi bi-arrow-down-up"></i> <strong>Classificar por:</strong>
           </div>
 
-          <!-- 1º Critério -->
-          <div class="tb-sort-item">
-            <span class="tb-sort-badge">1º</span>
-            <select id="select-ordem-1" class="tb-sort-select">
-              <option value="nome" selected>Município</option>
-              <option value="super">Superintendência</option>
-              <option value="nivel">Nível de Apoio</option>
-              <option value="obitos">% Óbitos</option>
-              <option value="sinistros">% Sinistros</option>
-              <option value="snt">SNT</option>
-              <option value="der">DER</option>
-              <option value="saude">SES (DRS)</option>
-              <option value="pm">Polícia Militar</option>
-            </select>
-            <button type="button" id="btn-ordem-dir-1" class="tb-btn-sort-dir" title="Clique para alternar entre Crescente e Decrescente">
-              <i class="bi bi-arrow-up" id="icon-ordem-dir-1"></i> <span id="txt-ordem-dir-1">Crescente</span>
-            </button>
+          <div id="tb-sort-rules-container" class="tb-sort-rules-container">
+            <!-- Gerado dinamicamente -->
           </div>
 
-          <!-- 2º Critério (Opcional) -->
-          <div class="tb-sort-item">
-            <span class="tb-sort-badge">2º</span>
-            <select id="select-ordem-2" class="tb-sort-select">
-              <option value="" selected>(Nenhum - Desativado)</option>
-              <option value="nome">Município</option>
-              <option value="super">Superintendência</option>
-              <option value="nivel">Nível de Apoio</option>
-              <option value="obitos">% Óbitos</option>
-              <option value="sinistros">% Sinistros</option>
-              <option value="snt">SNT</option>
-              <option value="der">DER</option>
-              <option value="saude">SES (DRS)</option>
-              <option value="pm">Polícia Militar</option>
-            </select>
-            <button type="button" id="btn-ordem-dir-2" class="tb-btn-sort-dir is-disabled" title="Clique para alternar entre Crescente e Decrescente" disabled>
-              <i class="bi bi-arrow-up" id="icon-ordem-dir-2"></i> <span id="txt-ordem-dir-2">Crescente</span>
+          <div class="tb-sort-actions">
+            <button type="button" id="btn-add-criterio" class="tb-btn-add-sort" title="Adicionar mais um critério de ordenação">
+              <i class="bi bi-plus-lg"></i> Adicionar critério
+            </button>
+            <button type="button" id="btn-reset-ordem" class="tb-btn-reset-sort-clean" title="Restaurar ordenação alfabética (Município A-Z)">
+              <i class="bi bi-arrow-counterclockwise"></i> Ordem Padrão
             </button>
           </div>
-
-          <!-- Botão Restaurar Ordem Padrão -->
-          <button type="button" id="btn-reset-ordem" class="tb-btn-reset-sort-clean" title="Restaurar ordenação alfabética (Município A-Z)">
-            <i class="bi bi-arrow-counterclockwise"></i> Ordem Padrão
-          </button>
         </div>
       </div>
     </div>
@@ -9510,8 +9544,20 @@ grid-auto-rows: minmax(0, 1fr);">
   var municipiosFiltrados = [];
   var paginaAtual = 1;
   var itensPorPagina = 25;
-  var ordem1 = { col: 'nome', dir: 'asc' };
-  var ordem2 = { col: '', dir: 'asc' };
+  var colunasDisponiveis = [
+    { id: 'nome', rotulo: 'Município' },
+    { id: 'super', rotulo: 'Superintendência' },
+    { id: 'nivel', rotulo: 'Nível de Apoio' },
+    { id: 'obitos', rotulo: '% Óbitos' },
+    { id: 'sinistros', rotulo: '% Sinistros' },
+    { id: 'snt', rotulo: 'SNT' },
+    { id: 'der', rotulo: 'DER' },
+    { id: 'saude', rotulo: 'SES (DRS)' },
+    { id: 'pm', rotulo: 'PMESP' }
+  ];
+  var regrasOrdenacao = [
+    { col: 'nome', dir: 'asc' }
+  ];
   var eventosIniciados = false;
   var ultimoClickSort = 0;
 
@@ -9683,60 +9729,123 @@ grid-auto-rows: minmax(0, 1fr);">
 
   function ordenarDados() {
     municipiosFiltrados.sort(function(a, b) {
-      var diff1 = compararPorRegra(a, b, ordem1.col, ordem1.dir);
-      if (diff1 !== 0) return diff1;
-      if (ordem2.col && ordem2.col !== ordem1.col) {
-        var diff2 = compararPorRegra(a, b, ordem2.col, ordem2.dir);
-        if (diff2 !== 0) return diff2;
+      for (var i = 0; i < regrasOrdenacao.length; i++) {
+        var diff = compararPorRegra(a, b, regrasOrdenacao[i].col, regrasOrdenacao[i].dir);
+        if (diff !== 0) return diff;
       }
       return a.nome.localeCompare(b.nome, 'pt-BR');
     });
 
-    atualizarUIOrdenacao();
+    renderizarControlesOrdenacao();
   }
 
-  function atualizarUIOrdenacao() {
-    var sel1 = document.getElementById('select-ordem-1');
-    if (sel1 && sel1.value !== ordem1.col) sel1.value = ordem1.col;
+  function renderizarControlesOrdenacao() {
+    var container = document.getElementById('tb-sort-rules-container');
+    if (!container) return;
 
-    var txt1 = document.getElementById('txt-ordem-dir-1');
-    var icon1 = document.getElementById('icon-ordem-dir-1');
-    if (txt1) txt1.textContent = (ordem1.dir === 'asc') ? 'Crescente' : 'Decrescente';
-    if (icon1) icon1.className = (ordem1.dir === 'asc') ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+    var html = '';
+    regrasOrdenacao.forEach(function(regra, idx) {
+      var numOrd = (idx + 1) + 'º';
+      var isDesc = (regra.dir === 'desc');
+      var dirText = isDesc ? 'Decrescente' : 'Crescente';
+      var dirIcon = isDesc ? 'bi-arrow-down' : 'bi-arrow-up';
 
-    var sel2 = document.getElementById('select-ordem-2');
-    if (sel2 && sel2.value !== ordem2.col) sel2.value = ordem2.col;
+      html += '<div class="tb-sort-item" data-sort-idx="' + idx + '">';
+      html += '  <span class="tb-sort-badge">' + numOrd + '</span>';
+      html += '  <select class="tb-sort-select" data-sort-action="col">';
+      colunasDisponiveis.forEach(function(col) {
+        var sel = (col.id === regra.col) ? ' selected' : '';
+        html += '<option value="' + col.id + '"' + sel + '>' + col.rotulo + '</option>';
+      });
+      html += '  </select>';
 
-    var btn2 = document.getElementById('btn-ordem-dir-2');
-    var txt2 = document.getElementById('txt-ordem-dir-2');
-    var icon2 = document.getElementById('icon-ordem-dir-2');
+      html += '  <button type="button" class="tb-btn-sort-dir" data-sort-action="dir" title="Clique para alternar entre Crescente e Decrescente">';
+      html += '    <i class="bi ' + dirIcon + '"></i> <span>' + dirText + '</span>';
+      html += '  </button>';
 
-    if (btn2) {
-      if (!ordem2.col) {
-        btn2.disabled = true;
-        btn2.classList.add('is-disabled');
-        if (txt2) txt2.textContent = 'Crescente';
-        if (icon2) icon2.className = 'bi bi-arrow-up';
+      if (regrasOrdenacao.length > 1) {
+        html += '  <button type="button" class="tb-btn-sort-remove" data-sort-action="remove" title="Remover este critério">&times;</button>';
+      }
+
+      html += '</div>';
+    });
+
+    container.innerHTML = html;
+
+    var btnAdd = document.getElementById('btn-add-criterio');
+    if (btnAdd) {
+      if (regrasOrdenacao.length >= colunasDisponiveis.length) {
+        btnAdd.disabled = true;
+        btnAdd.classList.add('is-disabled');
+        btnAdd.title = 'Todas as colunas já foram adicionadas';
       } else {
-        btn2.disabled = false;
-        btn2.classList.remove('is-disabled');
-        if (txt2) txt2.textContent = (ordem2.dir === 'asc') ? 'Crescente' : 'Decrescente';
-        if (icon2) icon2.className = (ordem2.dir === 'asc') ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+        btnAdd.disabled = false;
+        btnAdd.classList.remove('is-disabled');
+        btnAdd.title = 'Adicionar mais um critério de ordenação';
       }
     }
 
+    container.querySelectorAll('.tb-sort-item').forEach(function(itemEl) {
+      var idx = parseInt(itemEl.getAttribute('data-sort-idx'), 10);
+
+      var sel = itemEl.querySelector('[data-sort-action="col"]');
+      if (sel) {
+        sel.addEventListener('change', function() {
+          var novaCol = this.value;
+          regrasOrdenacao[idx].col = novaCol;
+          regrasOrdenacao[idx].dir = (novaCol === 'obitos' || novaCol === 'sinistros') ? 'desc' : 'asc';
+          ordenarDados();
+          paginaAtual = 1;
+          renderizarTabela();
+        });
+      }
+
+      var btnDir = itemEl.querySelector('[data-sort-action="dir"]');
+      if (btnDir) {
+        btnDir.addEventListener('click', function() {
+          regrasOrdenacao[idx].dir = (regrasOrdenacao[idx].dir === 'asc') ? 'desc' : 'asc';
+          ordenarDados();
+          paginaAtual = 1;
+          renderizarTabela();
+        });
+      }
+
+      var btnRem = itemEl.querySelector('[data-sort-action="remove"]');
+      if (btnRem) {
+        btnRem.addEventListener('click', function() {
+          regrasOrdenacao.splice(idx, 1);
+          if (regrasOrdenacao.length === 0) {
+            regrasOrdenacao = [{ col: 'nome', dir: 'asc' }];
+          }
+          ordenarDados();
+          paginaAtual = 1;
+          renderizarTabela();
+        });
+      }
+    });
+
+    atualizarIconesTabela();
+  }
+
+  function atualizarIconesTabela() {
     document.querySelectorAll('#tabela-municipios th[data-col]').forEach(function(th) {
       var col = th.getAttribute('data-col');
       var icon = th.querySelector('.tb-sort-icon');
       if (!icon) return;
 
-      if (col === ordem1.col) {
-        var arrow = (ordem1.dir === 'asc') ? ' ▲' : ' ▼';
+      var idx = -1;
+      for (var i = 0; i < regrasOrdenacao.length; i++) {
+        if (regrasOrdenacao[i].col === col) { idx = i; break; }
+      }
+
+      if (idx === 0) {
+        var arrow = (regrasOrdenacao[0].dir === 'asc') ? ' ▲' : ' ▼';
         icon.innerHTML = '<span class="tb-sort-active">' + arrow + '</span>';
         th.style.backgroundColor = '#002e56';
-      } else if (ordem2.col && col === ordem2.col) {
-        var arrow = (ordem2.dir === 'asc') ? ' ▲' : ' ▼';
-        icon.innerHTML = '<span class="tb-sort-second">' + arrow + ' <small>(2º)</small></span>';
+      } else if (idx > 0) {
+        var arrow = (regrasOrdenacao[idx].dir === 'asc') ? ' ▲' : ' ▼';
+        var rotOrd = (idx + 1) + 'º';
+        icon.innerHTML = '<span class="tb-sort-second">' + arrow + ' <small>(' + rotOrd + ')</small></span>';
         th.style.backgroundColor = '#0b4d82';
       } else {
         icon.innerHTML = ' ↕';
@@ -9746,8 +9855,7 @@ grid-auto-rows: minmax(0, 1fr);">
   }
 
   window.resetarOrdenacao = function() {
-    ordem1 = { col: 'nome', dir: 'asc' };
-    ordem2 = { col: '', dir: 'asc' };
+    regrasOrdenacao = [{ col: 'nome', dir: 'asc' }];
     ordenarDados();
     paginaAtual = 1;
     renderizarTabela();
@@ -9758,14 +9866,17 @@ grid-auto-rows: minmax(0, 1fr);">
     if (agora - ultimoClickSort < 50) return;
     ultimoClickSort = agora;
 
-    if (ordem1.col === col) {
-      ordem1.dir = (ordem1.dir === 'asc') ? 'desc' : 'asc';
+    if (regrasOrdenacao.length > 0 && regrasOrdenacao[0].col === col) {
+      regrasOrdenacao[0].dir = (regrasOrdenacao[0].dir === 'asc') ? 'desc' : 'asc';
     } else {
-      ordem1.col = col;
-      ordem1.dir = (col === 'obitos' || col === 'sinistros') ? 'desc' : 'asc';
-      if (ordem2.col === col) {
-        ordem2.col = '';
+      for (var i = 1; i < regrasOrdenacao.length; i++) {
+        if (regrasOrdenacao[i].col === col) {
+          regrasOrdenacao.splice(i, 1);
+          break;
+        }
       }
+      var defaultDir = (col === 'obitos' || col === 'sinistros') ? 'desc' : 'asc';
+      regrasOrdenacao[0] = { col: col, dir: defaultDir };
     }
 
     ordenarDados();
@@ -10028,57 +10139,32 @@ grid-auto-rows: minmax(0, 1fr);">
         if (superSelect) superSelect.value = '';
         if (nivelSelect) nivelSelect.value = '';
         if (sntSelect) sntSelect.value = '';
-        ordem1 = { col: 'nome', dir: 'asc' };
-        ordem2 = { col: '', dir: 'asc' };
+        regrasOrdenacao = [{ col: 'nome', dir: 'asc' }];
         aplicarFiltros();
       });
     }
 
-    var selOrdem1 = document.getElementById('select-ordem-1');
-    if (selOrdem1) {
-      selOrdem1.addEventListener('change', function() {
-        ordem1.col = this.value;
-        ordem1.dir = (ordem1.col === 'obitos' || ordem1.col === 'sinistros') ? 'desc' : 'asc';
-        if (ordem2.col === ordem1.col) {
-          ordem2.col = '';
+    var btnAddCriterio = document.getElementById('btn-add-criterio');
+    if (btnAddCriterio) {
+      btnAddCriterio.addEventListener('click', function() {
+        var usadas = {};
+        regrasOrdenacao.forEach(function(r) { usadas[r.col] = true; });
+
+        var proximaCol = null;
+        for (var i = 0; i < colunasDisponiveis.length; i++) {
+          if (!usadas[colunasDisponiveis[i].id]) {
+            proximaCol = colunasDisponiveis[i].id;
+            break;
+          }
         }
-        ordenarDados();
-        paginaAtual = 1;
-        renderizarTabela();
-      });
-    }
 
-    var btnDir1 = document.getElementById('btn-ordem-dir-1');
-    if (btnDir1) {
-      btnDir1.addEventListener('click', function() {
-        ordem1.dir = (ordem1.dir === 'asc') ? 'desc' : 'asc';
-        ordenarDados();
-        paginaAtual = 1;
-        renderizarTabela();
-      });
-    }
-
-    var selOrdem2 = document.getElementById('select-ordem-2');
-    if (selOrdem2) {
-      selOrdem2.addEventListener('change', function() {
-        ordem2.col = this.value;
-        if (ordem2.col) {
-          ordem2.dir = (ordem2.col === 'obitos' || ordem2.col === 'sinistros') ? 'desc' : 'asc';
+        if (proximaCol) {
+          var defaultDir = (proximaCol === 'obitos' || proximaCol === 'sinistros') ? 'desc' : 'asc';
+          regrasOrdenacao.push({ col: proximaCol, dir: defaultDir });
+          ordenarDados();
+          paginaAtual = 1;
+          renderizarTabela();
         }
-        ordenarDados();
-        paginaAtual = 1;
-        renderizarTabela();
-      });
-    }
-
-    var btnDir2 = document.getElementById('btn-ordem-dir-2');
-    if (btnDir2) {
-      btnDir2.addEventListener('click', function() {
-        if (!ordem2.col) return;
-        ordem2.dir = (ordem2.dir === 'asc') ? 'desc' : 'asc';
-        ordenarDados();
-        paginaAtual = 1;
-        renderizarTabela();
       });
     }
 
