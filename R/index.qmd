@@ -252,7 +252,7 @@ function(el, x, data) {
     {grupo:'Apoio para campanha', id:'nivel', nome:'Nível de apoio', campo:'nivel_apoio', titulo:'Nível de apoio',
      desc:'Condições de integração, autonomia e demanda de apoio para campanha',
      fixas:{
-       'Autonomia completa': '#D0E5F5',
+       'Autonomia completa': '#CBD5E1',
        'Apoio em Fiscalização': '#72B3E8',
        'Apoio em Educação': '#2b7bc4',
        'Apoio em Educação/Fiscalização': '#005CA8',
@@ -1022,7 +1022,7 @@ function(el, x, data) {
     if (isSemAdesao || nivelTxt === 'Não está aderido ao Sistran') {
       return 'background:#6E6E6E;color:#FFFFFF;border:1px solid #555555;';
     }
-    if (nivelTxt === 'Autonomia completa') return 'background:#D0E5F5;color:#073860;border:1px solid #a3cbe8;';
+    if (nivelTxt === 'Autonomia completa') return 'background:#E2E8F0;color:#334155;border:1px solid #cbd5e1;';
     if (nivelTxt === 'Apoio em Fiscalização') return 'background:#72B3E8;color:#05243e;border:1px solid #4a9ede;';
     if (nivelTxt === 'Apoio em Educação') return 'background:#2b7bc4;color:#FFFFFF;border:1px solid #2365a1;';
     if (nivelTxt === 'Apoio em Educação/Fiscalização') return 'background:#005CA8;color:#FFFFFF;border:1px solid #00457d;';
@@ -1054,6 +1054,7 @@ function(el, x, data) {
   var ctrlPrio = L.control({position: 'topright'});
   ctrlPrio.onAdd = function() {
     btnPrioDiv = L.DomUtil.create('div', '');
+    btnPrioDiv.style.display = 'none';
     btnPrioDiv.innerHTML = '<button type="button" class="mdn-btn-toggle-prio">📋 Lista de Priorização</button>';
     L.DomEvent.disableClickPropagation(btnPrioDiv);
     btnPrioDiv.querySelector('button').addEventListener('click', function() {
@@ -1065,20 +1066,17 @@ function(el, x, data) {
 
   function atualizarBotaoPriorizacao() {
     if (!btnPrioDiv) return;
+    if (sel === null) {
+      btnPrioDiv.style.display = 'none';
+      return;
+    }
+    btnPrioDiv.style.display = '';
     var btn = btnPrioDiv.querySelector('button');
     if (!btn) return;
-    var count = 0;
-    if (sel !== null) {
-      count = MUN.features.filter(function(f) {
-        return f.properties.super === sel && !deveIgnorar(f.properties);
-      }).length;
-      btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + count + '</span>';
-    } else {
-      var countTotal = MUN.features.filter(function(f) {
-        return !deveIgnorar(f.properties);
-      }).length;
-      btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + countTotal + '</span>';
-    }
+    var count = MUN.features.filter(function(f) {
+      return f.properties.super === sel && !deveIgnorar(f.properties);
+    }).length;
+    btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + count + '</span>';
   }
 
   function criarEstruturaPainel() {
@@ -1662,7 +1660,7 @@ cat('
 
   function getBadgeNivel(cat) {
     var styles = {
-      'Autonomia completa': 'background-color: #D0E5F5; color: #073860; border: 1px solid #a3cbe8;',
+      'Autonomia completa': 'background-color: #E2E8F0; color: #334155; border: 1px solid #cbd5e1;',
       'Apoio em Fiscalização': 'background-color: #72B3E8; color: #05243e; border: 1px solid #4a9ede;',
       'Apoio em Educação': 'background-color: #2b7bc4; color: #ffffff; border: 1px solid #2365a1;',
       'Apoio em Educação/Fiscalização': 'background-color: #005CA8; color: #ffffff; border: 1px solid #00457d;',
