@@ -252,12 +252,10 @@ function(el, x, data) {
     {grupo:'Apoio para campanha', id:'nivel', nome:'Nível de apoio', campo:'nivel_apoio', titulo:'Nível de apoio',
      desc:'Condições de integração, autonomia e demanda de apoio para campanha',
      fixas:{
-       'Autonomia completa': '#CBD5E1',
+       'Estrutura própria': '#CBD5E1',
        'Apoio em Fiscalização': '#72B3E8',
        'Apoio em Educação': '#2b7bc4',
-       'Apoio em Educação/Fiscalização': '#005CA8',
-       'Apoio em Educação sem SNT': '#475569',
-       'Apoio em Educação/Fiscalização sem SNT': '#004077'
+       'Apoio em Educação e Fiscalização': '#004077'
      }},
     {grupo:'Apoio para campanha', id:'snt',   nome:'Adesão ao SNT',        campo:'snt',        titulo:'Adesão ao SNT',
      cor:'#005CA8', rot:ROT_SIMNAO},
@@ -309,20 +307,14 @@ function(el, x, data) {
   // Valor (texto) de um município em um tema
   function valorDe(p, t) {
     if (t.id === 'nivel') {
-      if (semAdesao(p)) return 'Não está aderido ao Sistran';
-      var temSnt = (norm(p.snt) === 'sim');
+      if (semAdesao(p)) return 'Não aderido ao Sistran';
       var fazAcoes = (norm(p.acoes) === 'sim');
       var fazAbord = (norm(p.abordagens) === 'sim');
 
-      if (temSnt) {
-        if (fazAcoes && fazAbord) return 'Autonomia completa';
-        if (fazAcoes && !fazAbord) return 'Apoio em Educação';
-        if (!fazAcoes && fazAbord) return 'Apoio em Fiscalização';
-        return 'Apoio em Educação/Fiscalização';
-      } else {
-        if (fazAcoes) return 'Apoio em Educação sem SNT';
-        return 'Apoio em Educação/Fiscalização sem SNT';
-      }
+      if (fazAcoes && fazAbord) return 'Estrutura própria';
+      if (fazAcoes && !fazAbord) return 'Apoio em Educação';
+      if (!fazAcoes && fazAbord) return 'Apoio em Fiscalização';
+      return 'Apoio em Educação e Fiscalização';
     }
     var v = p[t.campo];
     if (t.grad) return (v === null || v === undefined || v === '' || isNaN(+v)) ? SEM_INFO : +v;
@@ -717,7 +709,7 @@ function(el, x, data) {
 
   function htmlPopup(p) {
     var isSem = semAdesao(p);
-    var nivelTxt = isSem ? 'Não está aderido ao Sistran' : valorDe(p, TEMAS[0]);
+    var nivelTxt = isSem ? 'Não aderido ao Sistran' : valorDe(p, TEMAS[0]);
     var h = '<b>Município:</b> ' + esc(p.nome) +
             '<br><b>Superintendência:</b> ' + esc(p.super) +
             '<br><b>Nível de apoio:</b> ' + esc(nivelTxt);
@@ -949,7 +941,7 @@ function(el, x, data) {
                   TEMA.binario ? rotuloValor(TEMA, v) : v, cont[v] || 0, String(v));
       }
     });
-    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Não está aderido ao Sistran', nSem, '__SEM_ADESAO__');
+    if (nSem > 0) h += item('<span class="mdn-sw hach"></span>', 'Não aderido ao Sistran', nSem, '__SEM_ADESAO__');
 
     if (filtrosLegenda.size > 0) {
       h += '<div class="mdn-leg-limpar">' +
@@ -975,19 +967,18 @@ function(el, x, data) {
   function deveIgnorar(p) {
     if (semAdesao(p)) return true;
     var nv = valorDe(p, TEMAS[0]);
-    if (nv === 'Não está aderido ao Sistran' || nv === 'Autonomia completa') return true;
+    if (nv === 'Não aderido ao Sistran' || nv === 'Estrutura própria') return true;
     if (norm(p.acoes) === 'sim' && norm(p.abordagens) === 'sim') return true;
     return false;
   }
 
   function rankingNivel(p) {
     var nv = valorDe(p, TEMAS[0]);
-    if (nv === 'Apoio em Educação/Fiscalização sem SNT') return 1;
-    if (nv === 'Apoio em Educação sem SNT') return 2;
-    if (nv === 'Apoio em Educação/Fiscalização') return 3;
-    if (nv === 'Apoio em Educação') return 4;
-    if (nv === 'Apoio em Fiscalização') return 5;
-    return 6;
+    if (nv === 'Apoio em Educação e Fiscalização') return 1;
+    if (nv === 'Apoio em Educação') return 2;
+    if (nv === 'Apoio em Fiscalização') return 3;
+    if (nv === 'Estrutura própria') return 4;
+    return 5;
   }
 
   function compararPrioridade(a, b) {
@@ -1012,22 +1003,20 @@ function(el, x, data) {
 
   function calcularScore(p) {
     var r = rankingNivel(p);
-    var base = (7 - r) * 10;
+    var base = (6 - r) * 10;
     var ob = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? +p.prop_obitos : 0;
     var sin = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? +p.prop_sinistros : 0;
     return base + (ob * 0.6) + (sin * 0.4);
   }
 
   function estiloBadgeNivel(nivelTxt, isSemAdesao) {
-    if (isSemAdesao || nivelTxt === 'Não está aderido ao Sistran') {
+    if (isSemAdesao || nivelTxt === 'Não aderido ao Sistran') {
       return 'background:#6E6E6E;color:#FFFFFF;border:1px solid #555555;';
     }
-    if (nivelTxt === 'Autonomia completa') return 'background:#E2E8F0;color:#334155;border:1px solid #cbd5e1;';
+    if (nivelTxt === 'Estrutura própria') return 'background:#E2E8F0;color:#334155;border:1px solid #cbd5e1;';
     if (nivelTxt === 'Apoio em Fiscalização') return 'background:#72B3E8;color:#05243e;border:1px solid #4a9ede;';
     if (nivelTxt === 'Apoio em Educação') return 'background:#2b7bc4;color:#FFFFFF;border:1px solid #2365a1;';
-    if (nivelTxt === 'Apoio em Educação/Fiscalização') return 'background:#005CA8;color:#FFFFFF;border:1px solid #00457d;';
-    if (nivelTxt === 'Apoio em Educação sem SNT') return 'background:#475569;color:#FFFFFF;border:1px solid #334155;';
-    if (nivelTxt === 'Apoio em Educação/Fiscalização sem SNT') return 'background:#004077;color:#FFFFFF;border:1px solid #002a4e;';
+    if (nivelTxt === 'Apoio em Educação e Fiscalização') return 'background:#004077;color:#FFFFFF;border:1px solid #002a4e;';
     return 'background:#C4C4C4;color:#333333;';
   }
 
@@ -1104,9 +1093,7 @@ function(el, x, data) {
         '<div class="mdn-prio-select-row" style="margin-top:6px;">' +
           '<select class="mdn-prio-select" id="mdn-prio-nivel" title="Filtrar por Nível de Apoio" style="width:100%;">' +
             '<option value="todos">Todos os níveis de apoio</option>' +
-            '<option value="Apoio em Educação/Fiscalização sem SNT">Apoio em Educação/Fiscalização sem SNT</option>' +
-            '<option value="Apoio em Educação sem SNT">Apoio em Educação sem SNT</option>' +
-            '<option value="Apoio em Educação/Fiscalização">Apoio em Educação/Fiscalização</option>' +
+            '<option value="Apoio em Educação e Fiscalização">Apoio em Educação e Fiscalização</option>' +
             '<option value="Apoio em Educação">Apoio em Educação</option>' +
             '<option value="Apoio em Fiscalização">Apoio em Fiscalização</option>' +
           '</select>' +
@@ -1294,7 +1281,7 @@ function(el, x, data) {
     feats.forEach(function(f, idx) {
       var p = f.properties;
       var isSem = semAdesao(p);
-      var nivelTxt = isSem ? 'Não está aderido ao Sistran' : valorDe(p, TEMAS[0]);
+      var nivelTxt = isSem ? 'Não aderido ao Sistran' : valorDe(p, TEMAS[0]);
       var badgeStyle = estiloBadgeNivel(nivelTxt, isSem);
 
       var obVal = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? (+p.prop_obitos).toFixed(1) + '%' : '0.0%';
@@ -1432,13 +1419,11 @@ cat('
             <label class="tb-label" for="filtro-nivel">Nível de Apoio</label>
             <select id="filtro-nivel" class="tb-select">
               <option value="">Todos os Níveis de Apoio</option>
-              <option value="Apoio em Educação/Fiscalização sem SNT">Apoio em Educação/Fiscalização sem SNT</option>
-              <option value="Apoio em Educação sem SNT">Apoio em Educação sem SNT</option>
-              <option value="Apoio em Educação/Fiscalização">Apoio em Educação/Fiscalização</option>
+              <option value="Apoio em Educação e Fiscalização">Apoio em Educação e Fiscalização</option>
               <option value="Apoio em Educação">Apoio em Educação</option>
               <option value="Apoio em Fiscalização">Apoio em Fiscalização</option>
-              <option value="Autonomia completa">Autonomia completa</option>
-              <option value="Não está aderido ao Sistran">Não está aderido ao Sistran</option>
+              <option value="Estrutura própria">Estrutura própria</option>
+              <option value="Não aderido ao Sistran">Não aderido ao Sistran</option>
             </select>
           </div>
           <div class="tb-field">
@@ -1620,14 +1605,12 @@ cat('
   var ultimoClickSort = 0;
 
   var pesosNivel = {
-    'Apoio em Educação/Fiscalização sem SNT': 1,
-    'Apoio em Educação sem SNT': 2,
-    'Apoio em Educação/Fiscalização': 3,
-    'Apoio em Educação': 4,
-    'Apoio em Fiscalização': 5,
-    'Autonomia completa': 6,
-    'Não está aderido ao Sistran': 7,
-    'Sem informação': 8
+    'Apoio em Educação e Fiscalização': 1,
+    'Apoio em Educação': 2,
+    'Apoio em Fiscalização': 3,
+    'Estrutura própria': 4,
+    'Não aderido ao Sistran': 5,
+    'Sem informação': 6
   };
 
   function norm(s) {
@@ -1642,31 +1625,23 @@ cat('
   }
 
   function getCategoriaNivel(p) {
-    if (p.sem_adesao == 1) return 'Não está aderido ao Sistran';
-    var temSnt = (norm(p.snt) === 'sim');
+    if (p.sem_adesao == 1) return 'Não aderido ao Sistran';
     var fazAcoes = (norm(p.acoes) === 'sim');
     var fazAbord = (norm(p.abordagens) === 'sim');
 
-    if (temSnt) {
-      if (fazAcoes && fazAbord) return 'Autonomia completa';
-      if (fazAcoes && !fazAbord) return 'Apoio em Educação';
-      if (!fazAcoes && fazAbord) return 'Apoio em Fiscalização';
-      return 'Apoio em Educação/Fiscalização';
-    } else {
-      if (fazAcoes) return 'Apoio em Educação sem SNT';
-      return 'Apoio em Educação/Fiscalização sem SNT';
-    }
+    if (fazAcoes && fazAbord) return 'Estrutura própria';
+    if (fazAcoes && !fazAbord) return 'Apoio em Educação';
+    if (!fazAcoes && fazAbord) return 'Apoio em Fiscalização';
+    return 'Apoio em Educação e Fiscalização';
   }
 
   function getBadgeNivel(cat) {
     var styles = {
-      'Autonomia completa': 'background-color: #E2E8F0; color: #334155; border: 1px solid #cbd5e1;',
+      'Estrutura própria': 'background-color: #E2E8F0; color: #334155; border: 1px solid #cbd5e1;',
       'Apoio em Fiscalização': 'background-color: #72B3E8; color: #05243e; border: 1px solid #4a9ede;',
       'Apoio em Educação': 'background-color: #2b7bc4; color: #ffffff; border: 1px solid #2365a1;',
-      'Apoio em Educação/Fiscalização': 'background-color: #005CA8; color: #ffffff; border: 1px solid #00457d;',
-      'Apoio em Educação sem SNT': 'background-color: #475569; color: #ffffff; border: 1px solid #334155;',
-      'Apoio em Educação/Fiscalização sem SNT': 'background-color: #004077; color: #ffffff; border: 1px solid #002a4e;',
-      'Não está aderido ao Sistran': 'background-color: #6E6E6E; color: #ffffff; border: 1px solid #555555;',
+      'Apoio em Educação e Fiscalização': 'background-color: #004077; color: #ffffff; border: 1px solid #002a4e;',
+      'Não aderido ao Sistran': 'background-color: #6E6E6E; color: #ffffff; border: 1px solid #555555;',
       'Sem informação': 'background-color: #94a3b8; color: #ffffff;'
     };
     var s = styles[cat] || styles['Sem informação'];
