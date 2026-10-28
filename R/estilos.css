@@ -1028,4 +1028,532 @@ tr.tr-selected:hover {
   white-space: nowrap;
 }
 
+/* ==========================================================================
+   MELHORIAS DE DESIGN, USABILIDADE E ARTICULAÇÃO (MÓDULOS 1 A 4)
+   ========================================================================== */
+
+/* Botão Metodologia no Header / Navbar */
+.tb-btn-metodologia-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff !important;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  margin: 4px 8px 4px auto;
+}
+
+.tb-btn-metodologia-nav i {
+  color: #93c5fd;
+  font-size: 15px;
+}
+
+.tb-btn-metodologia-nav:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.tb-btn-metodologia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #004077;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.tb-btn-metodologia:hover {
+  background: #005ca8;
+  color: #ffffff;
+  border-color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Modal Institucional de Metodologia */
+.mdn-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  box-sizing: border-box;
+}
+
+.mdn-modal-overlay.ativo {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mdn-modal-container {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 820px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  transform: scale(0.96);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: "Open Sans", sans-serif;
+  color: #1e293b;
+}
+
+.mdn-modal-overlay.ativo .mdn-modal-container {
+  transform: scale(1);
+}
+
+.mdn-modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #004077;
+  color: #ffffff;
+  padding: 16px 22px;
+  flex: none;
+}
+
+.mdn-modal-hdr h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.mdn-modal-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.mdn-modal-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mdn-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.mdn-modal-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #004077;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 5px;
+}
+
+.mdn-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+.mdn-modal-table th,
+.mdn-modal-table td {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.mdn-modal-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #004077;
+}
+
+.mdn-modal-table tr:nth-child(even) td {
+  background: #fdfdfd;
+}
+
+.mdn-modal-callout {
+  background: #f0f7fd;
+  border-left: 4px solid #005ca8;
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12.5px;
+}
+
+.mdn-modal-callout strong {
+  color: #004077;
+}
+
+/* Tooltip Rico nas Superintendências */
+.mdn-tip-super {
+  font-family: "Open Sans", sans-serif;
+  color: #0f172a;
+  min-width: 170px;
+}
+
+.mdn-tip-super-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #004077;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 3px;
+  margin-bottom: 5px;
+}
+
+.mdn-tip-super-line {
+  font-size: 11.5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+/* Pop-up do Município em Card Estruturado */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  min-width: 410px !important;
+  max-width: 500px !important;
+  width: 450px !important;
+}
+
+.mdn-popup-card {
+  font-family: "Open Sans", sans-serif;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mdn-popup-hdr {
+  background: #004077;
+  color: #ffffff;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+
+.mdn-popup-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  padding-right: 18px;
+}
+
+.mdn-popup-sub {
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.mdn-popup-badge-box {
+  margin-top: 6px;
+}
+
+.mdn-popup-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  line-height: 1.1;
+}
+
+.mdn-popup-body {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.mdn-popup-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.mdn-popup-kpi {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mdn-popup-kpi-lbl {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.mdn-popup-kpi-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #004077;
+}
+
+.mdn-popup-pillars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 0 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mdn-pillar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.mdn-pillar.sim {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.mdn-pillar.nao {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.mdn-popup-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Disposição em Grid das Divisões Regionais */
+.mdn-popup-grid-orgaos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mdn-popup-grid-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 52px;
+  box-sizing: border-box;
+}
+
+.mdn-grid-item-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #004077;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.mdn-grid-item-val {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.mdn-grid-item-val span.pf {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.mdn-sem-rodovia {
+  color: #94a3b8;
+  font-weight: normal;
+}
+
+.mdn-popup-rodovias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mdn-btn-popup-sel.selecionado:hover {
+  background: #15803d;
+}
+
+/* Botão de seleção rápida no Card da Lista de Priorização */
+.mdn-card-sel-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.mdn-card-sel-btn:hover {
+  border-color: #004077;
+  color: #004077;
+  background: #f0f7fd;
+}
+
+.mdn-card-sel-btn.selecionado {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+  font-weight: 700;
+}
+
+/* Barras de Dados Visuais (Data Bars) na Tabela Geral */
+.tb-databar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  min-width: 70px;
+}
+
+.tb-databar-num {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.tb-databar-bg {
+  width: 100%;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tb-databar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.tb-databar-fill.obitos {
+  background: linear-gradient(90deg, #38bdf8, #005ca8);
+}
+
+.tb-databar-fill.sinistros {
+  background: linear-gradient(90deg, #c084fc, #7b2fbe);
+}
+
+/* Botão de Exportação de Articulação na Gaveta */
+.tb-btn-exportar-articulacao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #15803d;
+  color: #ffffff;
+  border: 1px solid #166534;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tb-btn-exportar-articulacao:hover:not(:disabled) {
+  background: #166534;
+  border-color: #14532d;
+  box-shadow: 0 3px 8px rgba(22, 101, 52, 0.3);
+  transform: translateY(-1px);
+}
+
+.tb-btn-exportar-articulacao:disabled {
+  background: #94a3b8;
+  border-color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Ajuste do Seletor de Camadas para não colidir com Painel de Priorização */
+.mdn-temas.deslocado {
+  right: 410px !important;
+  transition: right 0.25s ease;
+}
+
 

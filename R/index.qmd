@@ -1,5 +1,5 @@
 ---
-title: ""
+title: "Campanha Motociclistas 2026 — Articulação e Priorização"
 author: ""
 format: 
   dashboard:
@@ -618,6 +618,17 @@ function(el, x, data) {
     };
   }
 
+  // Métricas pré-computadas para tooltip rico das superintendências
+  var superMetrics = {};
+  SUPER.features.forEach(function(sf) {
+    var sNome = sf.properties.nome;
+    var munSup = MUN.features.filter(function(f) { return f.properties.super === sNome; });
+    var tot = munSup.length;
+    var prio = munSup.filter(function(f) { return !deveIgnorar(f.properties); }).length;
+    var sistran = munSup.filter(function(f) { return !semAdesao(f.properties); }).length;
+    superMetrics[sNome] = { total: tot, prio: prio, sistran: sistran };
+  });
+
   var superLayer = L.geoJSON(SUPER, {
     style: estiloSuper,
     pane: 'mdnSuper',
@@ -625,7 +636,13 @@ function(el, x, data) {
     bubblingMouseEvents: false,
     onEachFeature: function(f, layer) {
       var nome = f.properties.nome;
-      layer.bindTooltip(esc(nome), {sticky: true, className: 'mdn-tip'});
+      var sm = superMetrics[nome] || { total: 0, prio: 0, sistran: 0 };
+      var tipHtml = '<div class="mdn-tip-super">' +
+                      '<div class="mdn-tip-super-title">' + esc(nome) + '</div>' +
+                      '<div class="mdn-tip-super-line"><span>Total de Municípios:</span> <strong>' + sm.total + '</strong></div>' +
+                      '<div class="mdn-tip-super-line"><span>Aderidos ao Sistran:</span> <strong>' + sm.sistran + '</strong></div>' +
+                    '</div>';
+      layer.bindTooltip(tipHtml, {sticky: true, className: 'mdn-tip'});
       layer.on('mouseover', function() {
         layer.setStyle({fillColor: sel === null ? '#C2C2C2' : '#858585'});
       });
@@ -710,29 +727,75 @@ function(el, x, data) {
   function htmlPopup(p) {
     var isSem = semAdesao(p);
     var nivelTxt = isSem ? 'Não aderido ao Sistran' : valorDe(p, TEMAS[0]);
-    var h = '<b>Município:</b> ' + esc(p.nome) +
-            '<br><b>Superintendência:</b> ' + esc(p.super) +
-            '<br><b>Nível de apoio:</b> ' + esc(nivelTxt);
-    if (isSem) return h;
-    h += '<br><br>';
-    var out = '', grupo = null;
-    TEMAS.forEach(function(t) {
-      if (t.id === 'nivel') return;
-      var v = valorDe(p, t), txt;
-      if (v === SEM_INFO) txt = SEM_INFO;
-      else if (t.grad)    txt = fmtNum(t, v);
-      else if (t.binario) txt = rotuloValor(t, v);
-      else                txt = v;
-      if (grupo !== null) out += (t.grupo !== grupo) ? '<br><br>' : '<br>';   // linha em branco entre grupos
-      grupo = t.grupo;
-      out += '<b>' + esc(t.titulo) + ':</b> ' + esc(txt);
-      if (t.pf) {                                    // ponto focal logo abaixo do órgão
-        var pf = p[t.pf];
-        pf = (pf === null || pf === undefined || String(pf).trim() === '') ? SEM_INFO : String(pf).trim();
-        out += '<br><b>Ponto focal (' + esc(t.nome) + '):</b> ' + esc(pf).replace(/\r?\n/g, '<br>');
-      }
-    });
-    return h + out;
+    var badgeStyle = estiloBadgeNivel(nivelTxt, isSem);
+
+    var obVal = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? (+p.prop_obitos).toFixed(1) + '%' : '0.0%';
+    var sinVal = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? (+p.prop_sinistros).toFixed(1) + '%' : '0.0%';
+
+    var fazAcoes = (norm(p.acoes) === 'sim');
+    var fazAbord = (norm(p.abordagens) === 'sim');
+
+    var txtSistran = isSem ? 'Não aderido ao Sistran' : 'Aderido ao Sistran';
+    var txtAcoes = fazAcoes ? 'Realiza Fiscalização' : 'Não realiza Fiscalização';
+    var txtAbord = fazAbord ? 'Realiza Educação' : 'Não realiza Educação';
+
+    var rodoviasTags = '';
+    if (+p.artesp === 1) rodoviasTags += '<span class="mdn-tag-rodovia" title="Rodovia estadual concedida">ARTESP</span>';
+    if (+p.antt === 1)   rodoviasTags += '<span class="mdn-tag-rodovia" title="Rodovia federal concedida">ANTT</span>';
+    if (+p.prf === 1)    rodoviasTags += '<span class="mdn-tag-rodovia" title="Rodovia federal (PRF/DNIT)">PRF</span>';
+
+    var derVal = p.der ? esc(p.der) + (p.pf_der ? ' <span class="pf">(' + esc(p.pf_der) + ')</span>' : '') : '—';
+    var saudeVal = p.saude ? esc(p.saude) + (p.pf_drs ? ' <span class="pf">(' + esc(p.pf_drs) + ')</span>' : '') : '—';
+    var pmVal = p.pm ? esc(p.pm) + (p.pf_pm ? ' <span class="pf">(' + esc(p.pf_pm) + ')</span>' : '') : '—';
+    var rodVal = rodoviasTags ? ('<div class="mdn-popup-rodovias">' + rodoviasTags + '</div>') : '<span class="mdn-sem-rodovia">—</span>';
+
+    var h = '<div class="mdn-popup-card">' +
+              '<div class="mdn-popup-hdr">' +
+                '<div class="mdn-popup-title">' + esc(p.nome) + '</div>' +
+                '<div class="mdn-popup-sub">Superintendência: ' + esc(p.super) + '</div>' +
+                '<div class="mdn-popup-badge-box">' +
+                  '<span class="mdn-popup-badge" style="' + badgeStyle + '">' + esc(nivelTxt) + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="mdn-popup-body">' +
+                '<div class="mdn-popup-kpis">' +
+                  '<div class="mdn-popup-kpi">' +
+                    '<span class="mdn-popup-kpi-lbl">% Óbitos (Superintendência)</span>' +
+                    '<span class="mdn-popup-kpi-val">' + obVal + '</span>' +
+                  '</div>' +
+                  '<div class="mdn-popup-kpi">' +
+                    '<span class="mdn-popup-kpi-lbl">% Sinistros (Superintendência)</span>' +
+                    '<span class="mdn-popup-kpi-val">' + sinVal + '</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="mdn-popup-pillars">' +
+                  '<span class="mdn-pillar ' + (isSem ? 'nao' : 'sim') + '">' + (isSem ? '❌ ' : '✅ ') + txtSistran + '</span>' +
+                  '<span class="mdn-pillar ' + (fazAcoes ? 'sim' : 'nao') + '">' + (fazAcoes ? '✅ ' : '❌ ') + txtAcoes + '</span>' +
+                  '<span class="mdn-pillar ' + (fazAbord ? 'sim' : 'nao') + '">' + (fazAbord ? '✅ ' : '❌ ') + txtAbord + '</span>' +
+                '</div>' +
+                '<div class="mdn-popup-section-title">Divisões Regionais e Rodovias</div>' +
+                '<div class="mdn-popup-grid-orgaos">' +
+                  '<div class="mdn-popup-grid-item">' +
+                    '<div class="mdn-grid-item-lbl">DER-SP</div>' +
+                    '<div class="mdn-grid-item-val">' + derVal + '</div>' +
+                  '</div>' +
+                  '<div class="mdn-popup-grid-item">' +
+                    '<div class="mdn-grid-item-lbl">SES-SP</div>' +
+                    '<div class="mdn-grid-item-val">' + saudeVal + '</div>' +
+                  '</div>' +
+                  '<div class="mdn-popup-grid-item">' +
+                    '<div class="mdn-grid-item-lbl">PMESP</div>' +
+                    '<div class="mdn-grid-item-val">' + pmVal + '</div>' +
+                  '</div>' +
+                  '<div class="mdn-popup-grid-item">' +
+                    '<div class="mdn-grid-item-lbl">Rodovias</div>' +
+                    '<div class="mdn-grid-item-val">' + rodVal + '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+
+    return h;
   }
 
   function mostrarMunicipios(nome) {
@@ -745,7 +808,7 @@ function(el, x, data) {
       bubblingMouseEvents: false,
       onEachFeature: function(f, layer) {
         layer.bindTooltip(esc(f.properties.nome), {sticky: true, className: 'mdn-tip'});
-        layer.bindPopup(htmlPopup(f.properties), {maxWidth: 320});
+        layer.bindPopup(htmlPopup(f.properties), {maxWidth: 500, minWidth: 410, className: 'mdn-popup-custom'});
         layer.on('mouseover', function() {
           layer.setStyle({color: '#222222', weight: 2});
           layer.bringToFront();
@@ -824,7 +887,7 @@ function(el, x, data) {
     }
   }
 
-  map.on('click', function() { if (sel !== null) voltar(); });
+  // Desativado reset acidental no clique do mapa (retorno exclusivamente via botao "← Estado inteiro")
 
   // ------------------------------------------------------------------
   // Controles: camadas (toggle), botão de voltar e legenda
@@ -1030,11 +1093,14 @@ function(el, x, data) {
     } else {
       painelAberto = !!abrir;
     }
+    var temasEl = map.getContainer().querySelector('.mdn-temas');
     if (painelAberto) {
       painelDiv.classList.remove('recolhido');
+      if (temasEl) temasEl.classList.add('deslocado');
       atualizarListaPriorizacao();
     } else {
       painelDiv.classList.add('recolhido');
+      if (temasEl) temasEl.classList.remove('deslocado');
     }
     atualizarBotaoPriorizacao();
   }
@@ -1296,6 +1362,8 @@ function(el, x, data) {
       if (+p.prf === 1)    orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia federal (PRF/DNIT)">PRF</span>';
 
       var isSel = (munSelecionadoCard === p.nome);
+      var isMSelected = (typeof window.isMunicipioSelecionado === 'function') && window.isMunicipioSelecionado(p.nome);
+      var selBtnHtml = '<button type="button" class="mdn-card-sel-btn' + (isMSelected ? ' selecionado' : '') + '" data-nome="' + esc(p.nome) + '" title="' + (isMSelected ? 'Remover da articulação' : 'Adicionar à articulação') + '">' + (isMSelected ? '✓ Articular' : '+ Articular') + '</button>';
 
       cardsHtml +=
         '<div class="mdn-card-mun' + (isSel ? ' selecionado' : '') + '" data-nome="' + esc(p.nome) + '" title="Clique para focar no mapa">' +
@@ -1304,7 +1372,10 @@ function(el, x, data) {
               '<span class="mdn-card-pos">#' + (idx + 1) + '</span>' +
               '<span class="mdn-card-nome">' + esc(p.nome) + '</span>' +
             '</div>' +
-            '<span class="mdn-badge-nivel" style="' + badgeStyle + '">' + esc(nivelTxt) + '</span>' +
+            '<div style="display:flex;align-items:center;gap:5px;">' +
+              '<span class="mdn-badge-nivel" style="' + badgeStyle + '">' + esc(nivelTxt) + '</span>' +
+              selBtnHtml +
+            '</div>' +
           '</div>' +
           '<div class="mdn-card-stats">' +
             '<div class="mdn-stat-pill">' +
@@ -1322,8 +1393,19 @@ function(el, x, data) {
 
     listaEl.innerHTML = cardsHtml;
 
+    listaEl.querySelectorAll('.mdn-card-sel-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var nome = this.getAttribute('data-nome');
+        if (nome && typeof window.toggleSelecaoMunicipio === 'function') {
+          window.toggleSelecaoMunicipio(nome);
+        }
+      });
+    });
+
     listaEl.querySelectorAll('.mdn-card-mun').forEach(function(card) {
-      card.addEventListener('click', function() {
+      card.addEventListener('click', function(e) {
+        if (e.target.closest('.mdn-card-sel-btn')) return;
         var nome = card.getAttribute('data-nome');
         if (nome) focarMunicipio(nome);
       });
@@ -1383,6 +1465,87 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
 #| results: asis
 
 cat('
+<!-- Modal Institucional de Metodologia e Critérios -->
+<div id="modal-metodologia" class="mdn-modal-overlay">
+  <div class="mdn-modal-container">
+    <div class="mdn-modal-hdr">
+      <h3><i class="bi bi-info-circle-fill"></i> Metodologia e Critérios da Campanha</h3>
+      <button type="button" class="mdn-modal-close" onclick="window.abrirModalMetodologia(false)" title="Fechar janela">&times;</button>
+    </div>
+    <div class="mdn-modal-body">
+      <div class="mdn-modal-callout">
+        <strong>Objetivo da Campanha:</strong> Redução contínua de sinistros e óbitos de motociclistas no Estado de São Paulo mediante articulação regional integrada entre DETRAN-SP, DER-SP, PMESP, SES-SP e Concessionárias Rodoviárias (ARTESP, ANTT, PRF).
+      </div>
+      <div>
+        <div class="mdn-modal-section-title"><i class="bi bi-diagram-3-fill"></i> Matriz dos 5 Níveis de Apoio</div>
+        <p style="margin:0 0 8px 0;font-size:12px;color:#64748b;">A categorização municipal avalia a capacidade autônoma de execução e direciona o apoio operacional do Estado:</p>
+        <table class="mdn-modal-table">
+          <thead>
+            <tr>
+              <th>Nível de Apoio</th>
+              <th style="text-align:center;">Sistran</th>
+              <th style="text-align:center;">Fiscalização</th>
+              <th style="text-align:center;">Educação</th>
+              <th>Critério e Diretriz de Apoio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tb-badge" style="background-color: #E2E8F0; color: #334155; border: 1px solid #cbd5e1;">Estrutura própria</span></td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Sim</td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Realiza</td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Realiza</td>
+              <td>Possui autonomia completa para ações educativas e fiscalização de trânsito. Não demanda apoio do Estado.</td>
+            </tr>
+            <tr>
+              <td><span class="tb-badge" style="background-color: #2b7bc4; color: #ffffff; border: 1px solid #2365a1;">Apoio em Educação</span></td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Sim</td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Realiza</td>
+              <td style="text-align:center;color:#dc2626;font-weight:bold;">Não realiza</td>
+              <td>Executa fiscalização de trânsito, mas necessita de apoio para abordagens educativas aos motociclistas.</td>
+            </tr>
+            <tr>
+              <td><span class="tb-badge" style="background-color: #72B3E8; color: #05243e; border: 1px solid #4a9ede;">Apoio em Fiscalização</span></td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Sim</td>
+              <td style="text-align:center;color:#dc2626;font-weight:bold;">Não realiza</td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Realiza</td>
+              <td>Executa ações educativas, mas necessita de apoio operacional para fiscalização de trânsito.</td>
+            </tr>
+            <tr>
+              <td><span class="tb-badge" style="background-color: #004077; color: #ffffff; border: 1px solid #002a4e;">Apoio em Educação e Fiscalização</span></td>
+              <td style="text-align:center;color:#16a34a;font-weight:bold;">Sim</td>
+              <td style="text-align:center;color:#dc2626;font-weight:bold;">Não realiza</td>
+              <td style="text-align:center;color:#dc2626;font-weight:bold;">Não realiza</td>
+              <td>Não possui estrutura nem para fiscalização nem para ações educativas. Demanda apoio prioritário conjunto.</td>
+            </tr>
+            <tr>
+              <td><span class="tb-badge" style="background-color: #6E6E6E; color: #ffffff; border: 1px solid #555555;">Não aderido ao Sistran</span></td>
+              <td style="text-align:center;color:#dc2626;font-weight:bold;">Não</td>
+              <td style="text-align:center;color:#94a3b8;">—</td>
+              <td style="text-align:center;color:#94a3b8;">—</td>
+              <td>Município não integrado ao Sistema Nacional de Trânsito / Sistran.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div class="mdn-modal-section-title"><i class="bi bi-graph-up-arrow"></i> Sinistralidade e Priorização (Infosiga)</div>
+        <ul style="margin:0;padding-left:20px;font-size:12.5px;color:#334155;display:flex;flex-direction:column;gap:5px;">
+          <li><strong>Período dos Dados:</strong> Sinistros e óbitos de motociclistas registrados a partir de Outubro/2024.</li>
+          <li><strong>Interpretação de % Óbitos e % Sinistros:</strong> Os valores percentuais representam a <strong>participação relativa do município no total da sua Superintendência</strong> (e não a taxa interna isolada do município). Identificam onde os sinistros e mortes daquela região estão mais concentrados.</li>
+          <li><strong>Critério de Priorização:</strong>
+            <ol style="margin-top:3px;padding-left:18px;">
+              <li>Nível de apoio com maior carência de estrutura (Apoio em Educação e Fiscalização &gt; Apoio em Educação &gt; Apoio em Fiscalização);</li>
+              <li>Maior % de óbitos de motociclistas na superintendência;</li>
+              <li>Maior % de sinistros de motociclistas na superintendência.</li>
+            </ol>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="tabela-dados" class="tb-container">
   <div class="tb-card">
     <!-- Cabeçalho com Título, Subtítulo e Botões de Ação -->
@@ -1432,6 +1595,12 @@ cat('
               <option value="">Todos</option>
               <option value="SIM">Sim (Aderido)</option>
               <option value="NÃO">Não (Sem adesão)</option>
+            </select>
+          </div>
+          <div class="tb-field">
+            <label class="tb-label" for="filtro-orgao-tabela">Regional / Rodovia</label>
+            <select id="filtro-orgao-tabela" class="tb-select">
+              <option value="">Todas as Regionais e Rodovias</option>
             </select>
           </div>
         </div>
@@ -1544,6 +1713,9 @@ cat('
         <span id="tb-drawer-subinfo" class="tb-drawer-subinfo"></span>
       </div>
       <div class="tb-drawer-controls">
+        <button type="button" id="btn-exportar-articulacao" class="tb-btn-exportar-articulacao" title="Exportar planilha Excel (.xlsx) com municípios e divisões regionais envolvidas" disabled>
+          <i class="bi bi-file-earmark-excel-fill"></i> Exportar Articulação (.xlsx)
+        </button>
         <button type="button" id="btn-drawer-toggle" class="tb-btn-drawer-toggle" title="Expandir ou recolher painel de contatos">
           <i class="bi bi-chevron-up" id="icon-drawer-toggle"></i> <span id="txt-drawer-toggle">Abrir Painel</span>
         </button>
@@ -1635,7 +1807,7 @@ cat('
     return 'Apoio em Educação e Fiscalização';
   }
 
-  function getBadgeNivel(cat) {
+  function getBadgeNivel(cat, m) {
     var styles = {
       'Estrutura própria': 'background-color: #E2E8F0; color: #334155; border: 1px solid #cbd5e1;',
       'Apoio em Fiscalização': 'background-color: #72B3E8; color: #05243e; border: 1px solid #4a9ede;',
@@ -1645,7 +1817,13 @@ cat('
       'Sem informação': 'background-color: #94a3b8; color: #ffffff;'
     };
     var s = styles[cat] || styles['Sem informação'];
-    return '<span class="tb-badge" style="' + s + '">' + cat + '</span>';
+    var diagTip = '';
+    if (m) {
+      var fiscDiag = (m.acoes_txt === 'Sim.') ? 'Realiza' : ((m.categoriaNivel === 'Estrutura própria' || m.categoriaNivel === 'Apoio em Educação') ? 'Realiza' : 'Não realiza');
+      var educDiag = (m.abord_txt === 'Sim.') ? 'Realiza' : ((m.categoriaNivel === 'Estrutura própria' || m.categoriaNivel === 'Apoio em Fiscalização') ? 'Realiza' : 'Não realiza');
+      diagTip = ' title="Diagnóstico: Sistran: ' + (m.sem_adesao ? 'Não' : 'Sim') + ' | Fiscalização: ' + fiscDiag + ' | Educação: ' + educDiag + '"';
+    }
+    return '<span class="tb-badge"' + diagTip + ' style="' + s + '">' + cat + '</span>';
   }
 
   function esc(s) {
@@ -1675,6 +1853,8 @@ cat('
         pf_drs: p.pf_drs || '',
         pm: p.pm || '',
         pf_pm: p.pf_pm || '',
+        acoes_txt: p.acoes || '',
+        abord_txt: p.abordagens || '',
         artesp: +p.artesp === 1,
         antt: +p.antt === 1,
         prf: +p.prf === 1,
@@ -1683,6 +1863,7 @@ cat('
     });
 
     popularSelectSuper();
+    popularSelectOrgao();
     aplicarFiltros();
   }
 
@@ -1705,11 +1886,32 @@ cat('
     });
   }
 
+  function popularSelectOrgao() {
+    var select = document.getElementById('filtro-orgao-tabela');
+    if (!select) return;
+    var orgaosSet = {};
+    todosMunicipios.forEach(function(m) {
+      if (m.der) orgaosSet['DER: ' + m.der] = 'der:' + m.der;
+      if (m.saude) orgaosSet['SES: ' + m.saude.replace(/^DRS\s+[IVXLCDM]+\s*-\s*/, '')] = 'saude:' + m.saude;
+      if (m.pm) orgaosSet['PM: ' + m.pm.replace(/^CPI-\d+\s*/, '')] = 'pm:' + m.pm;
+      if (m.artesp) orgaosSet['Rodovia: ARTESP (Estadual)'] = 'rod:artesp';
+      if (m.antt) orgaosSet['Rodovia: ANTT (Federal)'] = 'rod:antt';
+      if (m.prf) orgaosSet['Rodovia: PRF/DNIT (Federal)'] = 'rod:prf';
+    });
+
+    var optHtml = '<option value="">Todas as Regionais e Rodovias</option>';
+    Object.keys(orgaosSet).sort().forEach(function(lbl) {
+      optHtml += '<option value="' + esc(orgaosSet[lbl]) + '">' + esc(lbl) + '</option>';
+    });
+    select.innerHTML = optHtml;
+  }
+
   function aplicarFiltros() {
     var busca = normalizarTexto(document.getElementById('filtro-busca') ? document.getElementById('filtro-busca').value : '');
     var superSel = document.getElementById('filtro-super') ? document.getElementById('filtro-super').value : '';
     var nivelSel = document.getElementById('filtro-nivel') ? document.getElementById('filtro-nivel').value : '';
     var sntSel = document.getElementById('filtro-snt') ? document.getElementById('filtro-snt').value : '';
+    var orgaoSel = document.getElementById('filtro-orgao-tabela') ? document.getElementById('filtro-orgao-tabela').value : '';
 
     municipiosFiltrados = todosMunicipios.filter(function(m) {
       if (superSel && m.super !== superSel) return false;
@@ -1717,6 +1919,14 @@ cat('
       if (sntSel) {
         if (sntSel === 'SIM' && m.snt !== 'SIM') return false;
         if (sntSel === 'NÃO' && (m.snt === 'SIM' || !m.snt)) return false;
+      }
+      if (orgaoSel) {
+        var partes = orgaoSel.split(':');
+        var tipo = partes[0], valor = partes[1];
+        if (tipo === 'der' && m.der !== valor) return false;
+        if (tipo === 'saude' && m.saude !== valor) return false;
+        if (tipo === 'pm' && m.pm !== valor) return false;
+        if (tipo === 'rod' && !m[valor]) return false;
       }
       if (busca) {
         var strBusca = normalizarTexto(m.nome + ' ' + m.super + ' ' + m.der + ' ' + m.saude + ' ' + m.pm + ' ' + m.categoriaNivel);
@@ -1974,13 +2184,23 @@ cat('
         ? '<span class="tb-snt-sim">Sim</span>'
         : '<span class="tb-snt-nao">Não</span>';
 
-      var obitosHtml = (m.prop_obitos !== null)
-        ? ('<span style="font-family: Consolas, monospace; font-weight: 700; color: #00284d;">' + m.prop_obitos.toFixed(1).replace('.', ',') + '%</span>')
-        : '<span style="color: #94a3b8;">-</span>';
+      var obitosHtml = '<span style="color: #94a3b8;">-</span>';
+      if (m.prop_obitos !== null && !isNaN(m.prop_obitos)) {
+        var pctOb = Math.min(100, Math.max(0, m.prop_obitos));
+        obitosHtml = '<div class="tb-databar-wrapper">' +
+                       '<span class="tb-databar-num" style="color: #004077;">' + m.prop_obitos.toFixed(1).replace('.', ',') + '%</span>' +
+                       '<div class="tb-databar-bg"><div class="tb-databar-fill obitos" style="width:' + pctOb + '%;"></div></div>' +
+                     '</div>';
+      }
 
-      var sinistrosHtml = (m.prop_sinistros !== null)
-        ? ('<span style="font-family: Consolas, monospace; font-weight: 700; color: #00284d;">' + m.prop_sinistros.toFixed(1).replace('.', ',') + '%</span>')
-        : '<span style="color: #94a3b8;">-</span>';
+      var sinistrosHtml = '<span style="color: #94a3b8;">-</span>';
+      if (m.prop_sinistros !== null && !isNaN(m.prop_sinistros)) {
+        var pctSin = Math.min(100, Math.max(0, m.prop_sinistros));
+        sinistrosHtml = '<div class="tb-databar-wrapper">' +
+                          '<span class="tb-databar-num" style="color: #6b21a8;">' + m.prop_sinistros.toFixed(1).replace('.', ',') + '%</span>' +
+                          '<div class="tb-databar-bg"><div class="tb-databar-fill sinistros" style="width:' + pctSin + '%;"></div></div>' +
+                        '</div>';
+      }
 
       var safeNome = m.nome.replace(/'/g, "\\'");
       var safeSuper = m.super.replace(/'/g, "\\'");
@@ -1993,7 +2213,7 @@ cat('
         '<td style="text-align: center;"><input type="checkbox" class="tb-checkbox check-mun" data-nome="' + esc(m.nome) + '"' + (isChecked ? ' checked' : '') + '></td>' +
         '<td style="font-weight: 700; color: #00284d;">' + esc(m.nome) + '</td>' +
         '<td style="color: #475569; font-weight: 500;">' + esc(m.super) + '</td>' +
-        '<td style="text-align: center;">' + getBadgeNivel(m.categoriaNivel) + '</td>' +
+        '<td style="text-align: center;">' + getBadgeNivel(m.categoriaNivel, m) + '</td>' +
         '<td style="text-align: right;">' + obitosHtml + '</td>' +
         '<td style="text-align: right;">' + sinistrosHtml + '</td>' +
         '<td style="text-align: center;">' + sntBadge + '</td>' +
@@ -2120,6 +2340,114 @@ cat('
     }
   }
 
+  function exportarArticulacaoXLSX() {
+    var selMuns = todosMunicipios.filter(function(m) {
+      return municipiosSelecionados.has(m.nome);
+    });
+    if (!selMuns.length) {
+      alert('Nenhum município selecionado para exportação.');
+      return;
+    }
+
+    function gerarPlanilhaArticulacao() {
+      // 1. Dados detalhados dos municípios selecionados
+      var dadosMuns = selMuns.map(function(m) {
+        return {
+          'Município': m.nome,
+          'Superintendência': m.super,
+          'Nível de Apoio': m.categoriaNivel,
+          '% Óbitos Motociclistas': (m.prop_obitos !== null) ? m.prop_obitos.toFixed(2).replace('.', ',') + '%' : '',
+          '% Sinistros Motociclistas': (m.prop_sinistros !== null) ? m.prop_sinistros.toFixed(2).replace('.', ',') + '%' : '',
+          'Adesão ao SNT': m.snt,
+          'DER-SP Regional': m.der || '',
+          'DER-SP Ponto Focal': m.pf_der || '',
+          'SES-SP DRS': m.saude || '',
+          'SES-SP Ponto Focal': m.pf_drs || '',
+          'PMESP Comando': m.pm || '',
+          'PMESP Ponto Focal': m.pf_pm || '',
+          'Concessão ARTESP': m.artesp ? 'Sim' : 'Não',
+          'Rodovia Federal ANTT': m.antt ? 'Sim' : 'Não',
+          'Fiscalização PRF': m.prf ? 'Sim' : 'Não'
+        };
+      });
+
+      // 2. Agrupamento por divisões regionais e órgãos envolvidos
+      var orgaosAgrupados = [];
+
+      var addOrgao = function(orgao, divisao, pf, muns) {
+        orgaosAgrupados.push({
+          'Órgão': orgao,
+          'Divisão Regional': divisao,
+          'Ponto Focal': pf || 'Não cadastrado',
+          'Qtd Municípios Abrangidos': muns.length,
+          'Municípios': muns.join(', ')
+        });
+      };
+
+      var dersMap = {}, dersPf = {};
+      var pmsMap = {}, pmsPf = {};
+      var sesMap = {}, sesPf = {};
+      var artespMuns = [], anttMuns = [], prfMuns = [];
+
+      selMuns.forEach(function(m) {
+        if (m.der) {
+          if (!dersMap[m.der]) dersMap[m.der] = [];
+          dersMap[m.der].push(m.nome);
+          if (m.pf_der) dersPf[m.der] = m.pf_der;
+        }
+        if (m.pm) {
+          if (!pmsMap[m.pm]) pmsMap[m.pm] = [];
+          pmsMap[m.pm].push(m.nome);
+          if (m.pf_pm) pmsPf[m.pm] = m.pf_pm;
+        }
+        if (m.saude) {
+          if (!sesMap[m.saude]) sesMap[m.saude] = [];
+          sesMap[m.saude].push(m.nome);
+          if (m.pf_drs) sesPf[m.saude] = m.pf_drs;
+        }
+        if (m.artesp) artespMuns.push(m.nome);
+        if (m.antt) anttMuns.push(m.nome);
+        if (m.prf) prfMuns.push(m.nome);
+      });
+
+      Object.keys(dersMap).sort().forEach(function(d) {
+        addOrgao('DER-SP', d, dersPf[d], dersMap[d]);
+      });
+      Object.keys(pmsMap).sort().forEach(function(p) {
+        addOrgao('PMESP', p, pmsPf[p], pmsMap[p]);
+      });
+      Object.keys(sesMap).sort().forEach(function(s) {
+        addOrgao('SES-SP', s, sesPf[s], sesMap[s]);
+      });
+      if (artespMuns.length > 0) {
+        addOrgao('Rodovias Concedidas', 'ARTESP (Estadual)', '', artespMuns);
+      }
+      if (anttMuns.length > 0) {
+        addOrgao('Rodovias Concedidas', 'ANTT (Federal)', '', anttMuns);
+      }
+      if (prfMuns.length > 0) {
+        addOrgao('Polícia Rodoviária Federal', 'Delegacia PRF / SP', '', prfMuns);
+      }
+
+      var wb = XLSX.utils.book_new();
+      var wsDivisoes = XLSX.utils.json_to_sheet(orgaosAgrupados);
+      var wsMuns = XLSX.utils.json_to_sheet(dadosMuns);
+
+      XLSX.utils.book_append_sheet(wb, wsDivisoes, 'Divisões Regionais');
+      XLSX.utils.book_append_sheet(wb, wsMuns, 'Municípios Selecionados');
+      XLSX.writeFile(wb, 'articulacao_regional_motociclistas_2026.xlsx');
+    }
+
+    if (typeof XLSX !== 'undefined') {
+      gerarPlanilhaArticulacao();
+    } else {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = gerarPlanilhaArticulacao;
+      document.head.appendChild(s);
+    }
+  }
+
   function atualizarMasterCheck() {
     var checkTodos = document.getElementById('check-todos-municipios');
     if (!checkTodos) return;
@@ -2144,6 +2472,11 @@ cat('
     if (!drawer) return;
 
     var totalSel = municipiosSelecionados.size;
+    var btnExpArt = document.getElementById('btn-exportar-articulacao');
+    if (btnExpArt) {
+      btnExpArt.disabled = (totalSel === 0);
+    }
+
     if (totalSel === 0) {
       drawer.classList.remove('is-visible', 'is-expanded');
       gavetaExpandida = false;
@@ -2325,6 +2658,11 @@ cat('
       sntSelect.addEventListener('change', function() { aplicarFiltros(); });
     }
 
+    var orgaoSelect = document.getElementById('filtro-orgao-tabela');
+    if (orgaoSelect) {
+      orgaoSelect.addEventListener('change', function() { aplicarFiltros(); });
+    }
+
     var itensSelect = document.getElementById('itens-por-pagina');
     if (itensSelect) {
       itensSelect.addEventListener('change', function() {
@@ -2341,6 +2679,7 @@ cat('
         if (superSelect) superSelect.value = '';
         if (nivelSelect) nivelSelect.value = '';
         if (sntSelect) sntSelect.value = '';
+        if (orgaoSelect) orgaoSelect.value = '';
         regrasOrdenacao = [{ col: 'nome', dir: 'asc' }];
         aplicarFiltros();
       });
@@ -2381,6 +2720,63 @@ cat('
     if (btnXlsx) {
       btnXlsx.addEventListener('click', exportarXLSX);
     }
+
+    var btnExpArt = document.getElementById('btn-exportar-articulacao');
+    if (btnExpArt) {
+      btnExpArt.addEventListener('click', exportarArticulacaoXLSX);
+    }
+
+    // Modal de Metodologia e Critérios
+    window.abrirModalMetodologia = function(abrir) {
+      var m = document.getElementById('modal-metodologia');
+      if (!m) return;
+      if (abrir) {
+        m.classList.add('ativo');
+      } else {
+        m.classList.remove('ativo');
+      }
+    };
+
+    var modalEl = document.getElementById('modal-metodologia');
+    if (modalEl) {
+      modalEl.addEventListener('click', function(e) {
+        if (e.target === modalEl) window.abrirModalMetodologia(false);
+      });
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' || e.key === 'Esc') window.abrirModalMetodologia(false);
+    });
+
+    function inserirBotaoMetodologia() {
+      if (document.getElementById('btn-abrir-metodologia')) return;
+      var navCollapse = document.getElementById('dashboard-collapse');
+      if (navCollapse) {
+        var ul = document.createElement('ul');
+        ul.className = 'navbar-nav ms-auto d-flex flex-row align-items-center';
+        var li = document.createElement('li');
+        li.className = 'nav-item';
+        li.innerHTML = '<button type="button" id="btn-abrir-metodologia" class="tb-btn-metodologia-nav" onclick="window.abrirModalMetodologia(true)" title="Metodologia e Critérios: Matriz dos 5 Níveis de Apoio e Critérios de Risco (Infosiga)">' +
+                         '<i class="bi bi-info-circle-fill"></i>' +
+                         '<span>Metodologia e Critérios</span>' +
+                       '</button>';
+        ul.appendChild(li);
+        navCollapse.appendChild(ul);
+      } else {
+        var navContainer = document.querySelector('.navbar-container') || document.querySelector('.navbar');
+        if (navContainer) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.id = 'btn-abrir-metodologia';
+          btn.className = 'tb-btn-metodologia-nav';
+          btn.title = 'Metodologia e Critérios: Matriz dos 5 Níveis de Apoio e Critérios de Risco (Infosiga)';
+          btn.innerHTML = '<i class="bi bi-info-circle-fill"></i> <span>Metodologia e Critérios</span>';
+          btn.onclick = function() { window.abrirModalMetodologia(true); };
+          navContainer.appendChild(btn);
+        }
+      }
+    }
+    inserirBotaoMetodologia();
 
     // Seleção de linhas e checkboxes na tabela
     var corpoTabela = document.getElementById('tabela-municipios-corpo');
@@ -2440,7 +2836,7 @@ cat('
     var drawerBar = document.getElementById('tb-drawer-bar');
     if (drawerBar) {
       drawerBar.addEventListener('click', function(e) {
-        if (e.target.closest('#btn-drawer-clear')) return;
+        if (e.target.closest('#btn-drawer-clear') || e.target.closest('#btn-exportar-articulacao')) return;
         gavetaExpandida = !gavetaExpandida;
         atualizarGaveta();
       });
@@ -2472,6 +2868,48 @@ cat('
       });
     }
   }
+
+  window.isMunicipioSelecionado = function(nome) {
+    return municipiosSelecionados.has(nome);
+  };
+
+  window.toggleSelecaoMunicipio = function(nome) {
+    if (municipiosSelecionados.has(nome)) {
+      municipiosSelecionados.delete(nome);
+    } else {
+      municipiosSelecionados.add(nome);
+    }
+    renderizarTabela();
+    atualizarGaveta();
+
+    // Sincroniza botão no pop-up do mapa se aberto
+    var popBtn = document.querySelector('.mdn-btn-popup-sel');
+    if (popBtn && popBtn.getAttribute('data-nome') === nome) {
+      var isSel = municipiosSelecionados.has(nome);
+      if (isSel) {
+        popBtn.classList.add('selecionado');
+        popBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Selecionado para Articulação';
+      } else {
+        popBtn.classList.remove('selecionado');
+        popBtn.innerHTML = '<i class="bi bi-plus-circle"></i> Selecionar para Articulação';
+      }
+    }
+
+    // Sincroniza botão no card da lista de priorização se visível
+    var cardBtn = document.querySelector('.mdn-card-sel-btn[data-nome="' + esc(nome) + '"]');
+    if (cardBtn) {
+      var isSel = municipiosSelecionados.has(nome);
+      if (isSel) {
+        cardBtn.classList.add('selecionado');
+        cardBtn.textContent = '✓ Articular';
+        cardBtn.title = 'Remover da articulação';
+      } else {
+        cardBtn.classList.remove('selecionado');
+        cardBtn.textContent = '+ Articular';
+        cardBtn.title = 'Adicionar à articulação';
+      }
+    }
+  };
 
   window.initTabelaDados = function(features) {
     if (!features || !features.length) {
@@ -2509,12 +2947,18 @@ cat('
         window.dispatchEvent(new Event('resize'));
       });
     }
+    if (typeof inserirBotaoMetodologia === 'function') {
+      inserirBotaoMetodologia();
+    }
     if (window.geojsonMun && typeof window.initTabelaDados === 'function') {
       window.initTabelaDados(window.geojsonMun.features);
     }
   });
 
   window.addEventListener('hashchange', function() {
+    if (typeof inserirBotaoMetodologia === 'function') {
+      inserirBotaoMetodologia();
+    }
     if (window.location.hash === '#mapa-dinamico' || window.location.hash === '') {
       setTimeout(function() {
         window.dispatchEvent(new Event('resize'));
