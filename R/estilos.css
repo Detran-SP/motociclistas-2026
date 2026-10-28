@@ -6,20 +6,92 @@ h1, h2, h3, h4, h5, h6 {
   font-size: inherit;  /* títulos acompanham a fonte do corpo */
 }
 
-/* Ajusta texto em menus, cards, etc */
-.navbar-title, .navbar-brand, .card-title, .card-text {
-  font-size: 20px !important;
+/* ==========================================================================
+   ALINHAMENTO VERTICAL E ESTILOS DO HEADER / NAVBAR
+   ========================================================================== */
+.navbar {
+  padding: 0 1rem !important;
+  min-height: 58px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.navbar-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 58px !important;
+  padding: 0 !important;
+}
+
+.navbar-brand-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100% !important;
+}
+
+.navbar-brand-container a {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.navbar-logo {
+  height: 38px !important;
+  max-height: 38px !important;
+  width: auto !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
+.navbar-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  color: #004077 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+}
+
+#dashboard-collapse {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+.navbar-nav {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  height: 100% !important;
+}
+
+.navbar-nav.me-auto {
+  gap: 4px !important;
 }
 
 /* Abas de Navegação no Topo */
 .navbar .nav-link {
   color: #475569 !important;
-  font-size: 15px !important;
+  font-size: 14.5px !important;
   font-weight: 600 !important;
-  padding: 8px 18px !important;
+  padding: 0 16px !important;
+  height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
   border-bottom: 3px solid transparent !important;
   transition: all 0.2s ease !important;
   text-decoration: none !important;
+  margin: 0 !important;
+  line-height: 1 !important;
 }
 .navbar .nav-link:hover {
   color: #004077 !important;
@@ -154,9 +226,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .tb-filters-grid {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr;
-  gap: 12px;
+  grid-template-columns: 1.8fr 1.3fr 1.3fr 0.9fr 1.3fr;
+  gap: 10px;
   align-items: flex-end;
+  width: 100%;
 }
 
 @media (max-width: 992px) {
@@ -176,12 +249,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tb-label {
-  font-size: 11.5px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
   color: #475569 !important;
-  margin-bottom: 5px !important;
+  margin-bottom: 4px !important;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .tb-input, .tb-select {
@@ -677,8 +754,8 @@ tr.tr-selected:hover {
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border-top: 3px solid #004077;
-  box-shadow: 0 -6px 25px rgba(0, 32, 64, 0.2);
+  border-top: 3px solid #ffca00; /* Amarelo Ouro Sistran */
+  box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.25);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   transform: translateY(100%);
   font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -694,29 +771,51 @@ tr.tr-selected:hover {
   align-items: center;
   justify-content: space-between;
   padding: 10px 24px;
-  background: linear-gradient(90deg, #00284d 0%, #004077 100%);
+  background: linear-gradient(90deg, #0a1f38 0%, #003366 100%); /* Azul Marinho Profundo Institucional Sistran/Detran */
   color: #ffffff;
   user-select: none;
+  border-bottom: 2px solid #ffca00; /* Linha de destaque dourada */
 }
 
 .tb-drawer-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 13.5px;
 }
 
+.tb-drawer-logo-capsule {
+  background: #ffffff;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.tb-drawer-logo-img {
+  height: 22px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  display: block;
+}
+
 .tb-drawer-badge {
-  background: #38bdf8;
-  color: #00284d;
-  font-weight: 800;
+  background: #ffca00;
+  color: #0f172a;
+  font-weight: 700;
   font-size: 12px;
   padding: 3px 10px;
   border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .tb-drawer-subinfo {
-  color: #cbd5e1;
+  color: #94a3b8;
   font-size: 12.5px;
 }
 
@@ -769,7 +868,8 @@ tr.tr-selected:hover {
 /* Painel de Conteúdo da Gaveta (Expandido) */
 .tb-drawer-content {
   display: none;
-  max-height: 400px;
+  max-height: 72vh;
+  min-height: 440px;
   overflow-y: auto;
   background: #f8fafc;
   padding: 16px 24px;
@@ -781,8 +881,8 @@ tr.tr-selected:hover {
 
 /* Seção 1: Lista Extensa de Municípios Selecionados */
 .tb-drawer-muns-section {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -807,7 +907,7 @@ tr.tr-selected:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  max-height: 120px;
+  max-height: 75px;
   overflow-y: auto;
   padding: 6px;
   background: #ffffff;
@@ -968,6 +1068,109 @@ tr.tr-selected:hover {
   color: #dc2626;
 }
 
+/* --- Cores Institucionais dos Órgãos no Painel de Articulação --- */
+
+/* DER-SP: Amarelo Institucional */
+.tb-org-card.tb-org-der {
+  border: 2px solid #eab308 !important;
+}
+.tb-org-card.tb-org-der .tb-org-header {
+  background: #eab308 !important;
+  color: #0f172a !important;
+}
+.tb-org-card.tb-org-der .tb-org-header i {
+  color: #0f172a !important;
+}
+.tb-org-card.tb-org-der .tb-org-divisao-badge {
+  background: rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+.tb-org-card.tb-org-der .tb-chip-mun {
+  background: #fef08a;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+.tb-org-card.tb-org-der .tb-org-footer-muns {
+  border-top: 1px dashed #fde047;
+}
+
+/* SES-SP: Vermelho Institucional */
+.tb-org-card.tb-org-ses {
+  border: 2px solid #dc2626 !important;
+}
+.tb-org-card.tb-org-ses .tb-org-header {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-ses .tb-org-header i {
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-ses .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.tb-org-card.tb-org-ses .tb-chip-mun {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.tb-org-card.tb-org-ses .tb-org-footer-muns {
+  border-top: 1px dashed #fca5a5;
+}
+
+/* PMESP: Cinza Institucional */
+.tb-org-card.tb-org-pm {
+  border: 2px solid #475569 !important;
+}
+.tb-org-card.tb-org-pm .tb-org-header {
+  background: #475569 !important;
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-pm .tb-org-header i {
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-pm .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.tb-org-card.tb-org-pm .tb-chip-mun {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+.tb-org-card.tb-org-pm .tb-org-footer-muns {
+  border-top: 1px dashed #cbd5e1;
+}
+
+/* PRF: Azul Rodoviário Federal */
+.tb-org-card.tb-org-prf {
+  border: 2px solid #1e40af !important;
+}
+.tb-org-card.tb-org-prf .tb-org-header {
+  background: #1e40af !important;
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-prf .tb-org-header i {
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-prf .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.tb-org-card.tb-org-prf .tb-chip-mun {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.tb-org-card.tb-org-prf .tb-org-footer-muns {
+  border-top: 1px dashed #bae6fd;
+}
+
+
 /* Botão de Destaque da Lista de Priorização no Mapa Dinâmico */
 .mdn-btn-toggle-prio {
   background: #00284d;
@@ -1026,6 +1229,664 @@ tr.tr-selected:hover {
   user-select: none;
   transition: all 0.15s ease;
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   MELHORIAS DE DESIGN, USABILIDADE E ARTICULAÇÃO (MÓDULOS 1 A 4)
+   ========================================================================== */
+
+/* Botão Metodologia no Header / Navbar */
+.tb-btn-metodologia-nav {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: #004077 !important;
+  border: 1px solid #00284d !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 0 16px !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  text-decoration: none !important;
+  margin: 0 0 0 12px !important;
+  box-shadow: 0 2px 5px rgba(0, 40, 77, 0.25) !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.tb-btn-metodologia-nav i {
+  color: #ffca00 !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+.tb-btn-metodologia-nav span {
+  color: #ffffff !important;
+  line-height: 1 !important;
+}
+
+.tb-btn-metodologia-nav:hover {
+  background: #005ca8 !important;
+  border-color: #004077 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(0, 40, 77, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+.tb-btn-metodologia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #004077;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.tb-btn-metodologia:hover {
+  background: #005ca8;
+  color: #ffffff;
+  border-color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Modal Institucional de Metodologia */
+.mdn-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  box-sizing: border-box;
+}
+
+.mdn-modal-overlay.ativo {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mdn-modal-container {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 820px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  transform: scale(0.96);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: "Open Sans", sans-serif;
+  color: #1e293b;
+}
+
+.mdn-modal-overlay.ativo .mdn-modal-container {
+  transform: scale(1);
+}
+
+.mdn-modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #004077;
+  color: #ffffff;
+  padding: 16px 22px;
+  flex: none;
+}
+
+.mdn-modal-hdr h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.mdn-modal-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.mdn-modal-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mdn-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.mdn-modal-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #004077;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 5px;
+}
+
+.mdn-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+.mdn-modal-table th,
+.mdn-modal-table td {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.mdn-modal-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #004077;
+}
+
+.mdn-modal-table tr:nth-child(even) td {
+  background: #fdfdfd;
+}
+
+.mdn-modal-callout {
+  background: #f0f7fd;
+  border-left: 4px solid #005ca8;
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12.5px;
+}
+
+.mdn-modal-callout strong {
+  color: #004077;
+}
+
+/* Tooltip Flutuante Instantâneo do Mapa (Zero atraso / Zero retenção) */
+.mdn-floating-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none !important;
+  display: none;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
+  padding: 6px 10px !important;
+  font-weight: 700 !important;
+  font-size: 12.5px !important;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  white-space: nowrap !important;
+  transition: none !important;
+  will-change: transform;
+}
+
+/* Tooltip de Município no Mapa (Sem atraso e sem retenção) */
+.leaflet-tooltip.mdn-tip {
+  pointer-events: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+  font-size: 12.5px !important;
+  padding: 6px 10px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Tooltip Rico nas Superintendências */
+.mdn-tip-super {
+  font-family: "Open Sans", sans-serif;
+  color: #0f172a;
+  min-width: 170px;
+}
+
+.mdn-tip-super-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #004077;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 3px;
+  margin-bottom: 5px;
+}
+
+.mdn-tip-super-line {
+  font-size: 11.5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+/* Pop-up do Município em Card Estruturado */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  min-width: 410px !important;
+  max-width: 500px !important;
+  width: 450px !important;
+}
+
+.mdn-popup-card {
+  font-family: "Open Sans", sans-serif;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mdn-popup-hdr {
+  background: #004077;
+  color: #ffffff;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+
+.mdn-popup-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  padding-right: 18px;
+}
+
+.mdn-popup-sub {
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.mdn-popup-badge-box {
+  margin-top: 6px;
+}
+
+.mdn-popup-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  line-height: 1.1;
+}
+
+.mdn-popup-body {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.mdn-popup-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.mdn-popup-kpi {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mdn-popup-kpi-lbl {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.mdn-popup-kpi-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #004077;
+}
+
+.mdn-popup-pillars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 0 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mdn-pillar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.mdn-pillar.sim {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.mdn-pillar.nao {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.mdn-popup-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Disposição em Grid das Divisões Regionais */
+.mdn-popup-grid-orgaos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mdn-popup-grid-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 52px;
+  box-sizing: border-box;
+}
+
+.mdn-grid-item-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #004077;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.mdn-grid-item-val {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.mdn-grid-item-val span.pf {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.mdn-sem-rodovia {
+  color: #94a3b8;
+  font-weight: normal;
+}
+
+.mdn-popup-rodovias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mdn-btn-popup-sel.selecionado:hover {
+  background: #15803d;
+}
+
+/* Botão de seleção rápida no Card da Lista de Priorização */
+.mdn-card-sel-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.mdn-card-sel-btn:hover {
+  border-color: #004077;
+  color: #004077;
+  background: #f0f7fd;
+}
+
+.mdn-card-sel-btn.selecionado {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+  font-weight: 700;
+}
+
+/* Barras de Dados Visuais (Data Bars) na Tabela Geral */
+.tb-databar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  min-width: 70px;
+}
+
+.tb-databar-num {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.tb-databar-bg {
+  width: 100%;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tb-databar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.tb-databar-fill.obitos {
+  background: linear-gradient(90deg, #38bdf8, #005ca8);
+}
+
+.tb-databar-fill.sinistros {
+  background: linear-gradient(90deg, #c084fc, #7b2fbe);
+}
+
+/* Botão de Exportação de Articulação na Gaveta */
+.tb-btn-exportar-articulacao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #15803d;
+  color: #ffffff;
+  border: 1px solid #166534;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tb-btn-exportar-articulacao:hover:not(:disabled) {
+  background: #166534;
+  border-color: #14532d;
+  box-shadow: 0 3px 8px rgba(22, 101, 52, 0.3);
+  transform: translateY(-1px);
+}
+
+.tb-btn-exportar-articulacao:disabled {
+  background: #94a3b8;
+  border-color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Ajuste do Seletor de Camadas para não colidir com Painel de Priorização */
+.mdn-temas.deslocado {
+  right: 410px !important;
+  transition: right 0.25s ease;
+}
+
+/* ==========================================================================
+   SELETOR DE CAMADAS E CONTROLES DO MAPA (DESIGN HARMÔNICO COM CARDS)
+   ========================================================================== */
+
+.mdn-ctrl-card {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  font-family: "Open Sans", sans-serif;
+  color: #1e293b;
+  width: 250px;
+}
+
+.mdn-ctrl-hdr {
+  background: #004077;
+  color: #ffffff;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.2;
+}
+
+.mdn-ctrl-hdr i {
+  color: #ffca00;
+  font-size: 14px;
+}
+
+.mdn-ctrl-body {
+  padding: 8px 12px 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.mdn-grp {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 9px 0 4px 0;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 2px;
+}
+
+.mdn-grp:first-child {
+  margin-top: 2px;
+}
+
+.mdn-tema-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #334155;
+  margin: 1px 0;
+  transition: all 0.15s ease;
+}
+
+.mdn-tema-opt:hover {
+  background: #f1f5f9;
+  color: #004077;
+}
+
+.mdn-tema-opt.ativo {
+  background: #eff6ff;
+  color: #004077;
+  font-weight: 700;
+}
+
+.mdn-tema-opt input {
+  accent-color: #004077;
+  margin: 0;
+  cursor: pointer;
 }
 
 
