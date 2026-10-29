@@ -272,7 +272,7 @@ function(el, x, data) {
     {grupo:'Divisões regionais', id:'saude', nome:'SES-SP', campo:'saude', titulo:'Departamento Regional de Saúde (SES-SP)', pf:'pf_drs',
      paleta:['#10b981', '#34d399', '#059669', '#6ee7b7', '#047857', '#a7f3d0', '#15803d', '#4ade80', '#166534', '#86efac', '#22c55e', '#14532d', '#2dd4bf', '#115e59']},
     {grupo:'Divisões regionais', id:'pm',    nome:'PMESP',  campo:'pm',    titulo:'Comando da Polícia Militar (PMESP)', pf:'pf_pm',
-     paleta:['#deb135', '#b8860b', '#f3c74d', '#966d12', '#fae17a', '#7a570c', '#e5be52', '#614407', '#cca029', '#ffeb99', '#d49b28', '#8c6508']},
+     paleta:['#333335', '#4b5563', '#6b7280', '#374151', '#1f2937', '#52525b', '#3f3f46', '#27272a', '#71717a', '#525252', '#404040', '#18181b', '#64748b', '#475569']},
     // ---- Gestão Rodoviária ----
     {grupo:'Gestão Rodoviária', id:'artesp', nome:'Artesp',     campo:'artesp', titulo:'Rodovia estadual concedida (Artesp)',
      bool:true, cor:'#e52c35', rot:ROT_SIMNAO, desc:'Rodovia estadual concedida'},
@@ -302,6 +302,42 @@ function(el, x, data) {
                     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   function semAdesao(p) { return +p.sem_adesao === 1; }
+
+  // ------------------------------------------------------------------
+  // Top 25 Municípios com maior concentração de óbitos de motociclistas
+  // ------------------------------------------------------------------
+  var LISTA_TOP25 = [
+    { rank: 1,  nome: "São Paulo" },
+    { rank: 2,  nome: "Guarulhos" },
+    { rank: 3,  nome: "Campinas" },
+    { rank: 4,  nome: "Sorocaba" },
+    { rank: 5,  nome: "Ribeirão Preto" },
+    { rank: 6,  nome: "São Bernardo do Campo" },
+    { rank: 7,  nome: "São José dos Campos" },
+    { rank: 8,  nome: "São José do Rio Preto" },
+    { rank: 9,  nome: "Jundiaí" },
+    { rank: 10, nome: "Osasco" },
+    { rank: 11, nome: "Santo André" },
+    { rank: 12, nome: "Itaquaquecetuba" },
+    { rank: 13, nome: "Guarujá" },
+    { rank: 14, nome: "Cotia" },
+    { rank: 15, nome: "Piracicaba" },
+    { rank: 16, nome: "Mogi das Cruzes" },
+    { rank: 17, nome: "São Vicente" },
+    { rank: 18, nome: "Limeira" },
+    { rank: 19, nome: "Praia Grande" },
+    { rank: 20, nome: "Barueri" },
+    { rank: 21, nome: "Embu das Artes" },
+    { rank: 22, nome: "Taubaté" },
+    { rank: 23, nome: "Indaiatuba" },
+    { rank: 24, nome: "Diadema" },
+    { rank: 25, nome: "Atibaia" }
+  ];
+
+  var top25Lookup = {};
+  LISTA_TOP25.forEach(function(item) {
+    top25Lookup[norm(item.nome)] = item.rank;
+  });
 
   // Rótulo exibido para um valor em temas Sim/Não (ex.: "Sim" -> "Realiza")
   function rotuloValor(t, v) {
@@ -508,11 +544,13 @@ function(el, x, data) {
   map.createPane('mdnMun');      map.getPane('mdnMun').style.zIndex = 420;
   map.createPane('mdnDestaque'); map.getPane('mdnDestaque').style.zIndex = 430;
   map.getPane('mdnDestaque').style.pointerEvents = 'none';
+  map.createPane('mdnTop25');    map.getPane('mdnTop25').style.zIndex = 440;
 
   var rSuper    = L.svg({pane: 'mdnSuper'});
   var rMun      = L.svg({pane: 'mdnMun'});
   var rDestaque = L.svg({pane: 'mdnDestaque'});
-  map.addLayer(rSuper); map.addLayer(rMun); map.addLayer(rDestaque);
+  var rTop25    = L.svg({pane: 'mdnTop25'});
+  map.addLayer(rSuper); map.addLayer(rMun); map.addLayer(rDestaque); map.addLayer(rTop25);
 
   // Padrão SVG de hachura branca sobre cinza escuro
   (function() {
@@ -726,6 +764,145 @@ function(el, x, data) {
   var limitesEstado = superLayer.getBounds();
 
   // ------------------------------------------------------------------
+  // Camada de Destaque 25 Municípios com Mais Óbitos (Visão Estadual)
+  // ------------------------------------------------------------------
+  var top25Layer = null;
+
+  function pontoInternoMunicipio(geom) {
+    if (!geom) return null;
+    var rings = geom.type === 'Polygon' ? [geom.coordinates[0]] : geom.coordinates.map(function(p) { return p[0]; });
+    var maxArea = 0, bestRing = rings[0];
+    rings.forEach(function(ring) {
+      var a = 0;
+      for (var i = 0; i < ring.length - 1; i++) {
+        a += ring[i][0] * ring[i+1][1] - ring[i+1][0] * ring[i][1];
+      }
+      a = Math.abs(a);
+      if (a > maxArea) {
+        maxArea = a;
+        bestRing = ring;
+      }
+    });
+
+    function ptEmPoligono(pt, ring) {
+      var x = pt[0], y = pt[1];
+      var inside = false;
+      for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        var xi = ring[i][0], yi = ring[i][1];
+        var xj = ring[j][0], yj = ring[j][1];
+        var intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    var cx = 0, cy = 0, signedArea = 0;
+    for (var i = 0; i < bestRing.length - 1; i++) {
+      var p1 = bestRing[i], p2 = bestRing[i+1];
+      var factor = p1[0] * p2[1] - p2[0] * p1[1];
+      signedArea += factor;
+      cx += (p1[0] + p2[0]) * factor;
+      cy += (p1[1] + p2[1]) * factor;
+    }
+    signedArea /= 2;
+    if (Math.abs(signedArea) > 1e-7) {
+      cx /= (6 * signedArea);
+      cy /= (6 * signedArea);
+      if (ptEmPoligono([cx, cy], bestRing)) {
+        return L.latLng(cy, cx);
+      }
+    }
+
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    bestRing.forEach(function(p) {
+      minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+      minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+    });
+
+    for (var sX = 0.15; sX <= 0.85; sX += 0.05) {
+      for (var sY = 0.15; sY <= 0.85; sY += 0.05) {
+        var px = minX + (maxX - minX) * sX;
+        var py = minY + (maxY - minY) * sY;
+        if (ptEmPoligono([px, py], bestRing)) {
+          return L.latLng(py, px);
+        }
+      }
+    }
+
+    return L.latLng(bestRing[0][1], bestRing[0][0]);
+  }
+
+  function criarCamadaTop25() {
+    if (top25Layer) return top25Layer;
+    top25Layer = L.featureGroup();
+
+    var munMap = {};
+    MUN.features.forEach(function(f) {
+      munMap[norm(f.properties.nome)] = f;
+    });
+
+    LISTA_TOP25.forEach(function(item) {
+      var f = munMap[norm(item.nome)];
+      if (!f) return;
+      var p = f.properties;
+      var rank = item.rank;
+
+      var outline = L.geoJSON(f, {
+        style: function() {
+          return {
+            color: '#FFFFFF',
+            weight: 1,
+            opacity: 1,
+            fillColor: '#C3C3C3',
+            fillOpacity: 1
+          };
+        },
+        pane: 'mdnTop25',
+        renderer: rTop25,
+        bubblingMouseEvents: false
+      });
+
+      function onHover(e) {
+        outline.setStyle({ fillColor: '#ABABAB', weight: 1.5 });
+        mostrarTooltip(
+          '<div class="mdn-tip-top25">' +
+            '<div class="mdn-tip-top25-rank">Maior Quantidade de Óbitos • #' + rank + '</div>' +
+            '<div class="mdn-tip-top25-nome">' + esc(p.nome) + '</div>' +
+            '<div class="mdn-tip-top25-super">Superintendência: ' + esc(p.super) + '</div>' +
+            '<div class="mdn-tip-top25-desc">Clique para focar no município</div>' +
+          '</div>',
+          e
+        );
+      }
+
+      function onOut() {
+        outline.setStyle({ fillColor: '#C3C3C3', weight: 1 });
+        esconderTooltip();
+      }
+
+      function onClick(e) {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e);
+        }
+        esconderTooltip();
+        focarMunicipio(p.nome);
+      }
+
+      outline.on('mouseover', onHover);
+      outline.on('mousemove', function(e) { reposicionarTooltip(e); });
+      outline.on('mouseout', onOut);
+      outline.on('click', onClick);
+
+      top25Layer.addLayer(outline);
+    });
+
+    return top25Layer;
+  }
+
+  criarCamadaTop25();
+  if (top25Layer) top25Layer.addTo(map);
+
+  // ------------------------------------------------------------------
   // Camada de municípios
   // ------------------------------------------------------------------
   function estiloMun(f) {
@@ -806,6 +983,9 @@ function(el, x, data) {
     var nivelTxt = isSem ? 'Não aderido ao Sistran' : valorDe(p, TEMAS[0]);
     var badgeStyle = estiloBadgeNivel(nivelTxt, isSem);
 
+    var rankTop25 = top25Lookup ? top25Lookup[norm(p.nome)] : null;
+    var top25Badge = rankTop25 ? '<span class="mdn-badge-top25-pill">#' + rankTop25 + ' em maior quantidade de óbitos no Estado</span>' : '';
+
     var obVal = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? (+p.prop_obitos).toFixed(1) + '%' : '0.0%';
     var sinVal = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? (+p.prop_sinistros).toFixed(1) + '%' : '0.0%';
 
@@ -832,6 +1012,7 @@ function(el, x, data) {
                 '<div class="mdn-popup-sub">Superintendência: ' + esc(p.super) + '</div>' +
                 '<div class="mdn-popup-badge-box">' +
                   '<span class="mdn-popup-badge" style="' + badgeStyle + '">' + esc(nivelTxt) + '</span>' +
+                  top25Badge +
                 '</div>' +
               '</div>' +
               '<div class="mdn-popup-body">' +
@@ -875,8 +1056,11 @@ function(el, x, data) {
     return h;
   }
 
+  var superPinsLayer = null;
+
   function mostrarMunicipios(nome) {
     if (munLayer) { map.removeLayer(munLayer); munLayer = null; }
+    if (superPinsLayer) { map.removeLayer(superPinsLayer); superPinsLayer = null; }
     esconderTooltip();
     var feats = MUN.features.filter(function(f) { return f.properties.super === nome; });
     munLayer = L.geoJSON({type: 'FeatureCollection', features: feats}, {
@@ -903,6 +1087,63 @@ function(el, x, data) {
         });
       }
     }).addTo(map);
+
+    superPinsLayer = L.featureGroup();
+    feats.forEach(function(f) {
+      var p = f.properties;
+      var rankTop25 = top25Lookup ? top25Lookup[norm(p.nome)] : null;
+      if (!rankTop25) return;
+
+      var center = pontoInternoMunicipio(f.geometry);
+      if (!center) return;
+
+      var icon = L.divIcon({
+        className: 'mdn-top25-marker',
+        html: '<div class="mdn-top25-pulse"></div><div class="mdn-top25-badge">' + rankTop25 + '</div>',
+        iconSize: [26, 32],
+        iconAnchor: [13, 30]
+      });
+
+      var marker = L.marker(center, {
+        icon: icon,
+        pane: 'markerPane',
+        interactive: true,
+        bubblingMouseEvents: false
+      });
+
+      marker.on('mouseover', function(e) {
+        mostrarTooltip(
+          '<div class="mdn-tip-top25">' +
+            '<div class="mdn-tip-top25-rank">Maior Quantidade de Óbitos • #' + rankTop25 + ' no Estado</div>' +
+            '<div class="mdn-tip-top25-nome">' + esc(p.nome) + '</div>' +
+            '<div class="mdn-tip-top25-desc">Clique para abrir detalhes</div>' +
+          '</div>',
+          e
+        );
+      });
+      marker.on('mousemove', function(e) { reposicionarTooltip(e); });
+      marker.on('mouseout', function() { esconderTooltip(); });
+      marker.on('click', function(e) {
+        if (e && e.originalEvent) L.DomEvent.stopPropagation(e);
+        esconderTooltip();
+        if (munLayer) {
+          munLayer.eachLayer(function(l) {
+            if (l.feature && l.feature.properties && l.feature.properties.nome === p.nome) {
+              l.openPopup();
+              if (typeof destacarCardMunicipio === 'function') {
+                destacarCardMunicipio(p.nome);
+              }
+            }
+          });
+        }
+      });
+
+      superPinsLayer.addLayer(marker);
+    });
+
+    if (superPinsLayer.getLayers().length > 0) {
+      superPinsLayer.addTo(map);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -910,6 +1151,9 @@ function(el, x, data) {
   // ------------------------------------------------------------------
   function selecionar(nome) {
     sel = nome;
+    if (top25Layer && map.hasLayer(top25Layer)) {
+      map.removeLayer(top25Layer);
+    }
     filtrosLegenda.clear();
     buscaTexto = '';
     filtroOrgao = 'todos';
@@ -942,6 +1186,10 @@ function(el, x, data) {
   function voltar() {
     esconderTooltip();
     sel = null;
+    if (superPinsLayer) { map.removeLayer(superPinsLayer); superPinsLayer = null; }
+    if (top25Layer && !map.hasLayer(top25Layer)) {
+      map.addLayer(top25Layer);
+    }
     filtrosLegenda.clear();
     buscaTexto = '';
     filtroOrgao = 'todos';
@@ -1210,8 +1458,7 @@ function(el, x, data) {
   var ctrlPrio = L.control({position: 'topright'});
   ctrlPrio.onAdd = function() {
     btnPrioDiv = L.DomUtil.create('div', '');
-    btnPrioDiv.style.display = 'none';
-    btnPrioDiv.innerHTML = '<button type="button" class="mdn-btn-toggle-prio">📋 Lista de Priorização</button>';
+    btnPrioDiv.innerHTML = '<button type="button" class="mdn-btn-toggle-prio">25 Municípios com Mais Óbitos <span class="mdn-prio-badge" style="background:#004077;color:#fff;">25</span></button>';
     L.DomEvent.disableClickPropagation(btnPrioDiv);
     btnPrioDiv.querySelector('button').addEventListener('click', function() {
       alternarPainelPriorizacao();
@@ -1222,17 +1469,17 @@ function(el, x, data) {
 
   function atualizarBotaoPriorizacao() {
     if (!btnPrioDiv) return;
-    if (sel === null) {
-      btnPrioDiv.style.display = 'none';
-      return;
-    }
     btnPrioDiv.style.display = '';
     var btn = btnPrioDiv.querySelector('button');
     if (!btn) return;
-    var count = MUN.features.filter(function(f) {
-      return f.properties.super === sel && !deveIgnorar(f.properties);
-    }).length;
-    btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + count + '</span>';
+    if (sel === null) {
+      btn.innerHTML = '25 Municípios com Mais Óbitos <span class="mdn-prio-badge" style="background:#004077;color:#fff;">25</span>';
+    } else {
+      var count = MUN.features.filter(function(f) {
+        return f.properties.super === sel && !deveIgnorar(f.properties);
+      }).length;
+      btn.innerHTML = '📋 Lista de Priorização <span class="mdn-prio-badge">' + count + '</span>';
+    }
   }
 
   function criarEstruturaPainel() {
@@ -1340,16 +1587,19 @@ function(el, x, data) {
     var orgaoSel = painelDiv.querySelector('#mdn-prio-orgao');
 
     if (sel === null) {
-      titEl.textContent = 'Priorização: Estado de SP';
-      subEl.textContent = 'Top municípios prioritários do Estado';
+      titEl.textContent = '25 Municípios com Mais Óbitos de Motociclistas';
+      subEl.textContent = 'Ranking estadual por quantidade de óbitos';
     } else {
       titEl.textContent = 'Priorização: ' + sel;
       subEl.textContent = 'Superintendência do Detran-SP';
     }
 
     var featsBase = MUN.features.filter(function(f) {
+      if (sel === null) {
+        return !!top25Lookup[norm(f.properties.nome)];
+      }
       if (deveIgnorar(f.properties)) return false;
-      return sel === null || f.properties.super === sel;
+      return f.properties.super === sel;
     });
 
     var orgaosSet = {};
@@ -1380,12 +1630,16 @@ function(el, x, data) {
 
     var feats = MUN.features.filter(function(f) {
       var p = f.properties;
-      if (deveIgnorar(p)) return false;
-      if (sel !== null && p.super !== sel) return false;
+      if (sel === null) {
+        if (!top25Lookup[norm(p.nome)]) return false;
+      } else {
+        if (deveIgnorar(p)) return false;
+        if (p.super !== sel) return false;
+      }
 
       if (buscaTexto && norm(p.nome).indexOf(buscaTexto) === -1) return false;
 
-      if (filtrosLegenda && filtrosLegenda.size > 0) {
+      if (sel !== null && filtrosLegenda && filtrosLegenda.size > 0) {
         var match = false;
         if (semAdesao(p)) {
           match = filtrosLegenda.has('__SEM_ADESAO__');
@@ -1428,16 +1682,19 @@ function(el, x, data) {
       if (ordenacaoAtual === 'nome') {
         return pa.nome.localeCompare(pb.nome, 'pt-BR');
       }
+      if (sel === null) {
+        var rA = top25Lookup[norm(pa.nome)] || 999;
+        var rB = top25Lookup[norm(pb.nome)] || 999;
+        return rA - rB;
+      }
       return compararPrioridade(a, b);
     });
 
-    var totalEncontrados = feats.length;
-    if (sel === null && feats.length > 30) {
-      feats = feats.slice(0, 30);
+    if (sel === null) {
+      subEl.textContent = feats.length + ' municípios com maior quantidade de óbitos de motociclistas no Estado';
+    } else {
+      subEl.textContent = feats.length + ' município(s) com demanda de apoio em ' + sel;
     }
-
-    subEl.textContent = (sel === null && totalEncontrados > 30 ? 'Top 30 de ' + totalEncontrados : feats.length) +
-                        ' município(s) com demanda de apoio' + (sel ? ' em ' + sel : ' no Estado');
 
     if (feats.length === 0) {
       listaEl.innerHTML = '<div class="mdn-prio-vazio">Nenhum município encontrado com os filtros atuais.</div>';
@@ -1451,6 +1708,19 @@ function(el, x, data) {
       var nivelTxt = isSem ? 'Não aderido ao Sistran' : valorDe(p, TEMAS[0]);
       var badgeStyle = estiloBadgeNivel(nivelTxt, isSem);
 
+      var rankTop25 = top25Lookup[norm(p.nome)];
+      var posHtml = (sel === null && rankTop25)
+        ? '<span class="mdn-card-pos top25-badge">#' + rankTop25 + '</span>'
+        : '<span class="mdn-card-pos">#' + (idx + 1) + '</span>';
+
+      var top25TagNoCard = (sel !== null && rankTop25)
+        ? '<span class="mdn-badge-top25-pill" title="Entre os 25 municípios com maior quantidade de óbitos no Estado">#' + rankTop25 + ' em Óbitos no Estado</span>'
+        : '';
+
+      var superTagHtml = (sel === null)
+        ? '<div class="mdn-card-super-tag"><i class="bi bi-geo-alt"></i> ' + esc(p.super) + '</div>'
+        : '';
+
       var obVal = (p.prop_obitos !== null && !isNaN(+p.prop_obitos)) ? (+p.prop_obitos).toFixed(1) + '%' : '0.0%';
       var sinVal = (p.prop_sinistros !== null && !isNaN(+p.prop_sinistros)) ? (+p.prop_sinistros).toFixed(1) + '%' : '0.0%';
 
@@ -1463,19 +1733,20 @@ function(el, x, data) {
       if (+p.prf === 1)    orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia federal (PRF/DNIT)">PRF</span>';
 
       var isSel = (munSelecionadoCard === p.nome);
-      var isMSelected = (typeof window.isMunicipioSelecionado === 'function') && window.isMunicipioSelecionado(p.nome);
-      var selBtnHtml = '<button type="button" class="mdn-card-sel-btn' + (isMSelected ? ' selecionado' : '') + '" data-nome="' + esc(p.nome) + '" title="' + (isMSelected ? 'Remover da articulação' : 'Adicionar à articulação') + '">' + (isMSelected ? '✓ Articular' : '+ Articular') + '</button>';
 
       cardsHtml +=
         '<div class="mdn-card-mun' + (isSel ? ' selecionado' : '') + '" data-nome="' + esc(p.nome) + '" title="Clique para focar no mapa">' +
           '<div class="mdn-card-top">' +
             '<div class="mdn-card-nome-box">' +
-              '<span class="mdn-card-pos">#' + (idx + 1) + '</span>' +
-              '<span class="mdn-card-nome">' + esc(p.nome) + '</span>' +
+              posHtml +
+              '<div>' +
+                '<span class="mdn-card-nome">' + esc(p.nome) + '</span>' +
+                top25TagNoCard +
+                superTagHtml +
+              '</div>' +
             '</div>' +
             '<div style="display:flex;align-items:center;gap:5px;">' +
               '<span class="mdn-badge-nivel" style="' + badgeStyle + '">' + esc(nivelTxt) + '</span>' +
-              selBtnHtml +
             '</div>' +
           '</div>' +
           '<div class="mdn-card-stats">' +
@@ -2757,9 +3028,9 @@ cat('
         cardsHtml += renderCard('SES-SP', 'Secretaria de Estado da Saúde', '#10b981', 'bi-heart-pulse-fill', ses, 'Regional DRS', sesMap[ses], 'tb-org-ses', '#ffffff');
       });
 
-      // 3. PMESP (Amarelo Institucional #deb135)
+      // 3. PMESP (Cinza Institucional #333335)
       Object.keys(pmsMap).sort().forEach(function(pm) {
-        cardsHtml += renderCard('PMESP', 'Polícia Militar do Estado de SP', '#deb135', 'bi-shield-shaded', pm, 'Comando Regional', pmsMap[pm], 'tb-org-pm', '#0f172a');
+        cardsHtml += renderCard('PMESP', 'Polícia Militar do Estado de SP', '#333335', 'bi-shield-shaded', pm, 'Comando Regional', pmsMap[pm], 'tb-org-pm', '#ffffff');
       });
 
       // 4. PRF (Azul Rodoviário Federal)
@@ -3119,18 +3390,35 @@ cat('
         tabMapa.setAttribute('aria-selected', 'false');
       }
       if (tabContent) {
-        tabContent.style.setProperty('display', 'none', 'important');
+        tabContent.style.setProperty('display', 'grid', 'important');
       }
       if (paneMapa) {
         paneMapa.classList.remove('active', 'show');
       }
       if (paneTabela) {
         paneTabela.classList.add('active', 'show');
+        paneTabela.style.removeProperty('display');
       }
 
-      if (window.geojsonMun && typeof window.initTabelaDados === 'function' && (!todosMunicipios || !todosMunicipios.length)) {
-        window.initTabelaDados(window.geojsonMun.features);
+      function tentarCarregarTabela() {
+        if (typeof window.initTabelaDados === 'function' && (!todosMunicipios || !todosMunicipios.length)) {
+          if (window.geojsonMun && window.geojsonMun.features) {
+            window.initTabelaDados(window.geojsonMun.features);
+          } else {
+            var tentativas = 0;
+            var timerMun = setInterval(function() {
+              tentativas++;
+              if (window.geojsonMun && window.geojsonMun.features) {
+                clearInterval(timerMun);
+                window.initTabelaDados(window.geojsonMun.features);
+              } else if (tentativas > 50) {
+                clearInterval(timerMun);
+              }
+            }, 100);
+          }
+        }
       }
+      tentarCarregarTabela();
 
       if (atualizarHash !== false) {
         if (window.history && window.history.replaceState) {
@@ -3168,7 +3456,7 @@ cat('
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
+  function inicializarPagina() {
     vincularEventosAbas();
     if (typeof inserirBotaoMetodologia === 'function') {
       inserirBotaoMetodologia();
@@ -3182,7 +3470,13 @@ cat('
     } else {
       window.alternarAba('mapa-dinamico', false);
     }
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarPagina);
+  } else {
+    inicializarPagina();
+  }
 
   window.addEventListener('hashchange', function() {
     if (typeof inserirBotaoMetodologia === 'function') {
