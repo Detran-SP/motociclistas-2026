@@ -59,3 +59,7 @@ input/*DESEG_Campanha_Municipios.xlsx
 
 # Ignorar pasta geo
 geo/
+
+# Arquivos temporarios
+*.tmp
+test_file.txt
