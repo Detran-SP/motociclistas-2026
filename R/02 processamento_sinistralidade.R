@@ -48,6 +48,17 @@ bd_municipios <- readxl::read_excel("input/DESEG_Campanha_Municipios.xlsx", skip
   mutate(PROPORCAO_OBITOS = OBITOS_MOTOCICLISTAS/sum(OBITOS_MOTOCICLISTAS)*100,
          PROPORCAO_SINISTROS = SINISTROS_MOTOCICLISTAS/sum(SINISTROS_MOTOCICLISTAS)*100)
 
+# Atualização da adesão ao SISTRAN com base em data/mun_sistran.csv (se existir)
+if (file.exists("data/mun_sistran.csv")) {
+  tb_sistran <- read.csv("data/mun_sistran.csv", sep = ";", skip = 1, fileEncoding = "latin1", check.names = FALSE)
+  idx_ibge <- grep("ibge", tolower(names(tb_sistran)))[1]
+  if (!is.na(idx_ibge)) {
+    cods_sistran <- as.character(tb_sistran[[idx_ibge]])
+    bd_municipios <- bd_municipios |> 
+      mutate(ADESAO_SISTRAN = if_else(as.character(CD_MUN_7) %in% cods_sistran, "Sim", "Não"))
+  }
+}
+
 # Arquivo geoespacial
 sf_municipios <- sf::st_read("input/SP_Municipios.gpkg") |> 
   mutate(CD_MUN_7 = as.integer(CD_MUN)) |> 

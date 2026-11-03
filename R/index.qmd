@@ -169,12 +169,32 @@ if (anyNA(super_mun)) {
   warning(sum(is.na(super_mun)), " município(s) sem superintendência: não aparecerão no mapa.")
 }
 
+# ---- Atualização de adesão ao SISTRAN via data/mun_sistran.csv (se existir) ----
+sistran_csv_path <- if (file.exists("../data/mun_sistran.csv")) "../data/mun_sistran.csv" else if (file.exists("data/mun_sistran.csv")) "data/mun_sistran.csv" else NULL
+cods_sistran_csv <- NULL
+if (!is.null(sistran_csv_path)) {
+  tryCatch({
+    tb_sistran_csv <- read.csv(sistran_csv_path, sep = ";", skip = 1, fileEncoding = "latin1", check.names = FALSE)
+    idx_ibge <- grep("ibge", tolower(names(tb_sistran_csv)))[1]
+    if (!is.na(idx_ibge)) {
+      cods_sistran_csv <- as.character(tb_sistran_csv[[idx_ibge]])
+    }
+  }, error = function(e) NULL)
+}
+
+adesao_sistran_status <- if (!is.null(cods_sistran_csv)) {
+  col_ibge_mun <- acha_coluna(mun, c("^cd_mun_7$", "^cd_mun$", "^cod_ibge$", "ibge"), apenas_texto = TRUE, descricao = "código IBGE")
+  as.integer(!(as.character(mun[[col_ibge_mun]]) %in% cods_sistran_csv))
+} else {
+  as.integer(norm(v("ADESAO_SISTRAN")) %in% "nao")
+}
+
 # ---- Atributos usados no mapa ----
 mun_js <- st_sf(
   nome       = as.character(mun[[col_mun_nome]]),
   super      = super_mun,
   # 1 = município SEM adesão ao SISTRAN (cinza escuro hachurado)
-  sem_adesao = as.integer(norm(v("ADESAO_SISTRAN")) %in% "nao"),
+  sem_adesao = adesao_sistran_status,
   saude      = rotulo(v("DEPARTAMENTO_REGIONAL_SAUDE")),
   pm         = rotulo(v("COMANDO_POLICIA_MILITAR")),
   der        = rotulo(v("DIVISAO_REGIONAL_DER")),
@@ -1846,7 +1866,7 @@ cat('
     </div>
     <div class="mdn-modal-body">
       <div class="mdn-modal-callout">
-        <strong>Objetivo da Campanha:</strong> Redução contínua de sinistros e óbitos de motociclistas no Estado de São Paulo mediante articulação regional integrada entre DETRAN-SP, DER-SP, PMESP, SES-SP e Concessionárias Rodoviárias (ARTESP, ANTT, PRF).
+        <strong>Objetivo da Campanha:</strong> Redução contínua de sinistros e óbitos de motociclistas no Estado de São Paulo mediante articulação regional integrada entre membros natos do SISTRAN-SP.
       </div>
       <div>
         <div class="mdn-modal-section-title"><i class="bi bi-diagram-3-fill"></i> Matriz dos 5 Níveis de Apoio</div>
