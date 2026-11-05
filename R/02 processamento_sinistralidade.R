@@ -50,10 +50,13 @@ bd_municipios <- readxl::read_excel("input/DESEG_Campanha_Municipios.xlsx", skip
 
 # Atualização da adesão ao SISTRAN com base em data/mun_sistran.csv (se existir)
 if (file.exists("data/mun_sistran.csv")) {
-  tb_sistran <- read.csv("data/mun_sistran.csv", sep = ";", skip = 1, fileEncoding = "latin1", check.names = FALSE)
+  linhas_header <- readLines("data/mun_sistran.csv", n = 2, encoding = "latin1")
+  sep_sistran <- if (length(linhas_header) >= 2 && grepl(";", linhas_header[2])) ";" else ","
+  tb_sistran <- read.csv("data/mun_sistran.csv", sep = sep_sistran, skip = 1, fileEncoding = "latin1", check.names = FALSE)
   idx_ibge <- grep("ibge", tolower(names(tb_sistran)))[1]
   if (!is.na(idx_ibge)) {
-    cods_sistran <- as.character(tb_sistran[[idx_ibge]])
+    cods_sistran <- trimws(as.character(tb_sistran[[idx_ibge]]))
+    cods_sistran <- cods_sistran[nzchar(cods_sistran)]
     bd_municipios <- bd_municipios |> 
       mutate(ADESAO_SISTRAN = if_else(as.character(CD_MUN_7) %in% cods_sistran, "Sim", "Não"))
   }
