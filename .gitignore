@@ -63,3 +63,4 @@ geo/
 # Arquivos temporarios
 *.tmp
 test_file.txt
+*:Zone.Identifier

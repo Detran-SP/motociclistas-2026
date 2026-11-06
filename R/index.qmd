@@ -174,16 +174,19 @@ sistran_csv_path <- if (file.exists("../data/mun_sistran.csv")) "../data/mun_sis
 cods_sistran_csv <- NULL
 if (!is.null(sistran_csv_path)) {
   tryCatch({
-    tb_sistran_csv <- read.csv(sistran_csv_path, sep = ";", skip = 1, fileEncoding = "latin1", check.names = FALSE)
+    linhas_header <- readLines(sistran_csv_path, n = 2, encoding = "latin1")
+    sep_sistran <- if (length(linhas_header) >= 2 && grepl(";", linhas_header[2])) ";" else ","
+    tb_sistran_csv <- read.csv(sistran_csv_path, sep = sep_sistran, skip = 1, fileEncoding = "latin1", check.names = FALSE)
     idx_ibge <- grep("ibge", tolower(names(tb_sistran_csv)))[1]
     if (!is.na(idx_ibge)) {
-      cods_sistran_csv <- as.character(tb_sistran_csv[[idx_ibge]])
+      cods_sistran_csv <- trimws(as.character(tb_sistran_csv[[idx_ibge]]))
+      cods_sistran_csv <- cods_sistran_csv[nzchar(cods_sistran_csv)]
     }
   }, error = function(e) NULL)
 }
 
 adesao_sistran_status <- if (!is.null(cods_sistran_csv)) {
-  col_ibge_mun <- acha_coluna(mun, c("^cd_mun_7$", "^cd_mun$", "^cod_ibge$", "ibge"), apenas_texto = TRUE, descricao = "código IBGE")
+  col_ibge_mun <- acha_coluna(mun, c("^cd_mun_7$", "^cd_mun$", "^cod_ibge$", "ibge"), apenas_texto = FALSE, descricao = "código IBGE")
   as.integer(!(as.character(mun[[col_ibge_mun]]) %in% cods_sistran_csv))
 } else {
   as.integer(norm(v("ADESAO_SISTRAN")) %in% "nao")
@@ -1856,7 +1859,7 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
 #| echo: false
 #| results: asis
 
-cat('
+cat(r"---(
 <!-- Modal Institucional de Metodologia e Critérios -->
 <div id="modal-metodologia" class="mdn-modal-overlay">
   <div class="mdn-modal-container">
@@ -3511,5 +3514,5 @@ cat('
   });
 })();
 </script>
-')
+)---")
 ```
