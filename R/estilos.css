@@ -1175,6 +1175,232 @@ tr.tr-selected:hover {
   border-top: 1px dashed #bae6fd;
 }
 
+/* DETRAN-SP: Card Executivo Compacto da Superintendência (#004077) */
+.tb-org-card.tb-org-detran {
+  border: 1.5px solid #004077 !important;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 64, 119, 0.08) !important;
+  grid-column: 1 / -1;
+  overflow: hidden;
+}
+.tb-detran-compact-header {
+  background: #004077;
+  color: #ffffff;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tb-detran-compact-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.tb-detran-compact-title i {
+  color: #60a5fa;
+  font-size: 14px;
+}
+.tb-detran-muns-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #bfdbfe;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+.tb-detran-tag-lideranca {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.tb-detran-compact-body {
+  padding: 7px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f8fafc;
+}
+.tb-detran-inline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #1e293b;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+.tb-detran-cargo-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #004077;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 140px;
+}
+.tb-detran-cargo-badge.adjunto {
+  color: #475569;
+}
+.tb-detran-inline-nome {
+  font-weight: 600;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+.tb-detran-sep {
+  color: #cbd5e1;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+.tb-detran-inline-item {
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tb-contact-link {
+  color: #005ca8 !important;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tb-contact-link:hover {
+  text-decoration: underline;
+  color: #003666 !important;
+}
+.tb-link-icon {
+  font-size: 11px;
+}
+.tb-tel-sep {
+  color: #94a3b8;
+  margin: 0 4px;
+}
+
+/* Painel de Priorização do Mapa - Liderança da Superintendência */
+.mdn-prio-super-lideranca {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+.mdn-prio-lid-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.mdn-prio-lid-item {
+  line-height: 1.35;
+}
+.mdn-prio-lid-cargo {
+  opacity: 0.85;
+  font-weight: 600;
+}
+.mdn-prio-lid-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 10.5px;
+}
+.mdn-prio-lid-links a {
+  color: #bae6fd !important;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.mdn-prio-lid-links a:hover {
+  color: #ffffff !important;
+  text-decoration: underline;
+}
+
+/* Bloco de Liderança da Superintendência no Card do Município (Popup) */
+.mdn-popup-super-box {
+  background: #f0f7fd;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+.mdn-popup-super-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.mdn-popup-super-row.adjunto {
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 5px;
+  margin-top: 2px;
+}
+.mdn-popup-super-cargo {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #004077;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  min-width: 105px;
+}
+.mdn-popup-super-cargo.adjunto {
+  color: #475569;
+}
+.mdn-popup-super-nome {
+  color: #0f172a;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.mdn-popup-super-links {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 10.5px;
+}
+.mdn-popup-super-links a {
+  color: #005ca8 !important;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.mdn-popup-super-links a:hover {
+  text-decoration: underline;
+  color: #003666 !important;
+}
+.mdn-popup-lid-sep {
+  color: #94a3b8;
+  margin: 0 2px;
+}
+
 
 /* Botão de Destaque da Lista de Priorização no Mapa Dinâmico */
 .mdn-btn-toggle-prio {
@@ -1576,7 +1802,7 @@ tr.tr-selected:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 360px;
+  max-height: 450px;
   overflow-y: auto;
 }
 
