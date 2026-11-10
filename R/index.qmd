@@ -192,6 +192,48 @@ adesao_sistran_status <- if (!is.null(cods_sistran_csv)) {
   as.integer(norm(v("ADESAO_SISTRAN")) %in% "nao")
 }
 
+# ---- Contatos dos Superintendentes e Adjuntos via data/contatos_superintendentes.csv ----
+contatos_csv_path <- if (file.exists("../data/contatos_superintendentes.csv")) "../data/contatos_superintendentes.csv" else if (file.exists("data/contatos_superintendentes.csv")) "data/contatos_superintendentes.csv" else NULL
+contatos_super_json <- "{}"
+if (!is.null(contatos_csv_path)) {
+  tryCatch({
+    df_contatos <- read.csv(contatos_csv_path, fileEncoding = "latin1", stringsAsFactors = FALSE, check.names = FALSE)
+    idx_super <- 2
+    idx_email_super <- 3
+    idx_tel_super <- 4
+    idx_adj <- 5
+    idx_email_adj <- 6
+    idx_tel_adj <- 7
+    
+    lista_contatos <- list()
+    for (i in seq_len(nrow(df_contatos))) {
+      raw_nome <- df_contatos[[1]][i]
+      nome_limpo <- sub("^[Ss]uperintend[eê]ncia\\s+em\\s+", "", raw_nome)
+      nome_limpo <- trimws(stringi::stri_trans_general(nome_limpo, "Latin-ASCII"))
+      chave <- tolower(gsub("[^a-zA-Z0-9]+", "", nome_limpo))
+      chave_espaco <- tolower(trimws(gsub("[^a-zA-Z0-9 ]+", "", nome_limpo)))
+      
+      nome_display <- sub("^[Ss]uperintend[eê]ncia\\s+em\\s+", "", raw_nome)
+      nome_display <- trimws(nome_display)
+      
+      item_contato <- list(
+        superintendencia     = nome_display,
+        superintendente_nome = trimws(as.character(df_contatos[[idx_super]][i])),
+        superintendente_email= trimws(as.character(df_contatos[[idx_email_super]][i])),
+        superintendente_tel  = trimws(as.character(df_contatos[[idx_tel_super]][i])),
+        adjunto_nome         = trimws(as.character(df_contatos[[idx_adj]][i])),
+        adjunto_email        = trimws(as.character(df_contatos[[idx_email_adj]][i])),
+        adjunto_tel          = trimws(as.character(df_contatos[[idx_tel_adj]][i]))
+      )
+      lista_contatos[[chave]] <- item_contato
+      if (chave_espaco != chave) {
+        lista_contatos[[chave_espaco]] <- item_contato
+      }
+    }
+    contatos_super_json <- jsonlite::toJSON(lista_contatos, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
 # ---- Atributos usados no mapa ----
 mun_js <- st_sf(
   nome       = as.character(mun[[col_mun_nome]]),
@@ -235,6 +277,50 @@ function(el, x, data) {
   var map = this;
   var SUPER = JSON.parse(data.super);
   var MUN   = JSON.parse(data.mun);
+
+  var DIC_CONTATOS_PADRAO = {
+    "aracatuba": { "superintendencia": "Araçatuba", "superintendente_nome": "JOÃO MORAES FAGA NETO", "superintendente_email": "joao.neto@detran.sp.gov.br", "superintendente_tel": "(17) 98168-1745", "adjunto_nome": "José Guilherme Bernardes", "adjunto_email": "jose.bernardes@detran.sp.gov.br", "adjunto_tel": "(18) 996654339" },
+    "araraquara": { "superintendencia": "Araraquara", "superintendente_nome": "ERICA PRISCILA DE CARVALHO SANTOS", "superintendente_email": "erica.santos@detran.sp.gov.br", "superintendente_tel": "(16) 99347-7825", "adjunto_nome": "Joao Ricardo Inacio da Silva Silveira", "adjunto_email": "joao.silveira@detran.sp.gov.br", "adjunto_tel": "(16) 98108-7955" },
+    "bauru": { "superintendencia": "Bauru", "superintendente_nome": "ALEX MACHADO GOMES", "superintendente_email": "alex.gomes@detran.sp.gov.br", "superintendente_tel": "(14) 99870-6757", "adjunto_nome": "Fernanda Cury Pereira da Silva", "adjunto_email": "fernanda.cpsilva@detran.sp.gov.br", "adjunto_tel": "(14) 98126-4396" },
+    "piracicaba": { "superintendencia": "Piracicaba", "superintendente_nome": "DANIEL FERNANDO ROMERA", "superintendente_email": "daniel.romera@detran.sp.gov.br", "superintendente_tel": "(19) 98139-4041", "adjunto_nome": "Aparecida Rosemary Castoldo Lopes da Cunha", "adjunto_email": "aparecida.cunha@detran.sp.gov.br", "adjunto_tel": "(19) 99719-5800" },
+    "campinas": { "superintendencia": "Campinas", "superintendente_nome": "ANDERSON LUIS CERVANTES PEREIRA", "superintendente_email": "anderson.cpereira@detran.sp.gov.br", "superintendente_tel": "(19) 97409-9847", "adjunto_nome": "Cassiano Ricardo Brito Ramos", "adjunto_email": "cassiano.ramos@detran.sp.gov.br", "adjunto_tel": "(19) 98821-2197" },
+    "fernandopolis": { "superintendencia": "Fernandópolis", "superintendente_nome": "GISLAINE DE ARAÚJO SIMPLES", "superintendente_email": "gislaine.simples@detran.sp.gov.br", "superintendente_tel": "(17) 99153-2280", "adjunto_nome": "Camila Mara Ramos Leal", "adjunto_email": "camila.ramos@detran.sp.gov.br", "adjunto_tel": "(17)991687825" },
+    "franca": { "superintendencia": "Franca", "superintendente_nome": "EDNEIA COSTA DO NASCIMENTO", "superintendente_email": "edneia.nascimento@detran.sp.gov.br", "superintendente_tel": "(16) 99130-7825 / (11) 97066-7549", "adjunto_nome": "Marcelo de Melo Silva", "adjunto_email": "marcelo.silva@detran.sp.gov.br", "adjunto_tel": "(16) 99412-0444 / (11) 99208-7819" },
+    "guarulhos": { "superintendencia": "Guarulhos", "superintendente_nome": "VIVIANA MACEDO DOS SANTOS", "superintendente_email": "viviana.santos@detran.sp.gov.br", "superintendente_tel": "(11)94260-5029", "adjunto_nome": "Claudia Oliveira Carvalho Silva", "adjunto_email": "claudia.csilva@detran.sp.gov.br", "adjunto_tel": "(11) 9 5394-0145" },
+    "itapeva": { "superintendencia": "Itapeva", "superintendente_nome": "ADAUTO ROCHA TEIXEIRA JUNIOR", "superintendente_email": "adauto.junior@detran.sp.gov.br", "superintendente_tel": "(15) 99104-0697", "adjunto_nome": "João Antonio Grupp", "adjunto_email": "joao.grupp@detran.sp.gov.br", "adjunto_tel": "(11) 97064-6321 / (15) 99645-7595" },
+    "jundiai": { "superintendencia": "Jundiaí", "superintendente_nome": "NAYARA PEREIRA CINACHI", "superintendente_email": "nayara.cinachi@detran.sp.gov.br", "superintendente_tel": "(12) 98823-0227", "adjunto_nome": "Henrique Silva Bueno", "adjunto_email": "henrique.bueno@detran.sp.gov.br", "adjunto_tel": "17 99122-6754" },
+    "osasco": { "superintendencia": "Osasco", "superintendente_nome": "SANDRO LOURENÇO DE FARIAS", "superintendente_email": "sandro.farias@detran.sp.gov.br", "superintendente_tel": "(11) 98476-7580", "adjunto_nome": "Karin Müller", "adjunto_email": "karin.muller@detran.sp.gov.br", "adjunto_tel": "(11) 99417-9784" },
+    "presidenteprudente": { "superintendencia": "Presidente Prudente", "superintendente_nome": "FERNANDA MARIANO BATISTA", "superintendente_email": "fernanda.mbatista@detran.sp.gov.br", "superintendente_tel": "(18) 99164-6366", "adjunto_nome": "Aline de Souza Mazzi", "adjunto_email": "aline.mazzi@detran.sp.gov.br", "adjunto_tel": "18 99148-9941" },
+    "presidente prudente": { "superintendencia": "Presidente Prudente", "superintendente_nome": "FERNANDA MARIANO BATISTA", "superintendente_email": "fernanda.mbatista@detran.sp.gov.br", "superintendente_tel": "(18) 99164-6366", "adjunto_nome": "Aline de Souza Mazzi", "adjunto_email": "aline.mazzi@detran.sp.gov.br", "adjunto_tel": "18 99148-9941" },
+    "registro": { "superintendencia": "Registro", "superintendente_nome": "AILTON CARLOS MEANDA PEREIRA", "superintendente_email": "ailton.pereira@detran.sp.gov.br", "superintendente_tel": "(13) 99797-5232", "adjunto_nome": "José Claudemir dos Santos", "adjunto_email": "jose.csantos@detran.sp.gov.br", "adjunto_tel": "(13) 99603-6710" },
+    "ribeiraopreto": { "superintendencia": "Ribeirão Preto", "superintendente_nome": "MARCELO CADELCA DE MELO", "superintendente_email": "marcelo.melo@detran.sp.gov.br", "superintendente_tel": "(16) 99177-6020", "adjunto_nome": "Felipe Favero da Silva", "adjunto_email": "felipe.fsilva@detran.sp.gov.br", "adjunto_tel": "(16) 99796-6311" },
+    "ribeirao preto": { "superintendencia": "Ribeirão Preto", "superintendente_nome": "MARCELO CADELCA DE MELO", "superintendente_email": "marcelo.melo@detran.sp.gov.br", "superintendente_tel": "(16) 99177-6020", "adjunto_nome": "Felipe Favero da Silva", "adjunto_email": "felipe.fsilva@detran.sp.gov.br", "adjunto_tel": "(16) 99796-6311" },
+    "santos": { "superintendencia": "Santos", "superintendente_nome": "MAURO SERGIO MOREIRA", "superintendente_email": "mauro.moreira@detran.sp.gov.br", "superintendente_tel": "(11) 97055-7816", "adjunto_nome": "Leonardo Ortiz", "adjunto_email": "leonardo.ortiz@detran.sp.gov.br", "adjunto_tel": "(13) 97404-6672" },
+    "saobernardodocampo": { "superintendencia": "São Bernardo do Campo", "superintendente_nome": "TALITA CAROLINA DE MELO NUNES", "superintendente_email": "talita.nunes@detran.sp.gov.br", "superintendente_tel": "", "adjunto_nome": "", "adjunto_email": "", "adjunto_tel": "" },
+    "sao bernardo do campo": { "superintendencia": "São Bernardo do Campo", "superintendente_nome": "TALITA CAROLINA DE MELO NUNES", "superintendente_email": "talita.nunes@detran.sp.gov.br", "superintendente_tel": "", "adjunto_nome": "", "adjunto_email": "", "adjunto_tel": "" },
+    "saojosedoriopreto": { "superintendencia": "São José do Rio Preto", "superintendente_nome": "AMANDA COUTO", "superintendente_email": "amanda.couto@detran.sp.gov.br", "superintendente_tel": "(17) 98116-7286", "adjunto_nome": "Vanessa Barco Guimarães", "adjunto_email": "vanessa.guimaraes@detran.sp.gov.br", "adjunto_tel": "(17) 99646-0770" },
+    "sao jose do rio preto": { "superintendencia": "São José do Rio Preto", "superintendente_nome": "AMANDA COUTO", "superintendente_email": "amanda.couto@detran.sp.gov.br", "superintendente_tel": "(17) 98116-7286", "adjunto_nome": "Vanessa Barco Guimarães", "adjunto_email": "vanessa.guimaraes@detran.sp.gov.br", "adjunto_tel": "(17) 99646-0770" },
+    "saojosedoscampos": { "superintendencia": "São José dos Campos", "superintendente_nome": "JONAS LEANDRO CASTILHO SILVA", "superintendente_email": "jonas.silva@detran.sp.gov.br", "superintendente_tel": "(12) 99255-0163", "adjunto_nome": "Marcelino Israel dos Santos Ribeiro", "adjunto_email": "marcelino.ribeiro@detran.sp.gov.br", "adjunto_tel": "(12) 99109-0326" },
+    "sao jose dos campos": { "superintendencia": "São José dos Campos", "superintendente_nome": "JONAS LEANDRO CASTILHO SILVA", "superintendente_email": "jonas.silva@detran.sp.gov.br", "superintendente_tel": "(12) 99255-0163", "adjunto_nome": "Marcelino Israel dos Santos Ribeiro", "adjunto_email": "marcelino.ribeiro@detran.sp.gov.br", "adjunto_tel": "(12) 99109-0326" },
+    "saopaulo": { "superintendencia": "São Paulo", "superintendente_nome": "EDUARDO CHAVES DA SILVA GOMES", "superintendente_email": "eduardo.gomes@detran.sp.gov.br", "superintendente_tel": "(12) 99740-1196", "adjunto_nome": "Alexandra Rocha da Silva", "adjunto_email": "alexandra.silva@detran.sp.gov.br", "adjunto_tel": "(17) 98808-9307" },
+    "sao paulo": { "superintendencia": "São Paulo", "superintendente_nome": "EDUARDO CHAVES DA SILVA GOMES", "superintendente_email": "eduardo.gomes@detran.sp.gov.br", "superintendente_tel": "(12) 99740-1196", "adjunto_nome": "Alexandra Rocha da Silva", "adjunto_email": "alexandra.silva@detran.sp.gov.br", "adjunto_tel": "(17) 98808-9307" },
+    "sorocaba": { "superintendencia": "Sorocaba", "superintendente_nome": "RICARDO MENDES PEREIRA MUELLER", "superintendente_email": "ricardo.mueller@detran.sp.gov.br", "superintendente_tel": "(15) 98815-3001", "adjunto_nome": "Alexandre Albuquerque Diniz Kamibeppu", "adjunto_email": "alexandre.kamibeppu@detran.sp.gov.br", "adjunto_tel": "15991377345 / 11966261853" }
+  };
+
+  var CONTATOS_SUPER = (data && data.contatos) ? (typeof data.contatos === 'string' ? JSON.parse(data.contatos) : data.contatos) : null;
+  if (!CONTATOS_SUPER || Object.keys(CONTATOS_SUPER).length === 0) {
+    CONTATOS_SUPER = DIC_CONTATOS_PADRAO;
+  }
+  window.contatosSuperintendentes = CONTATOS_SUPER;
+
+  function getContatoSuper(nome) {
+    if (!nome) return null;
+    var dict = window.contatosSuperintendentes || DIC_CONTATOS_PADRAO;
+    if (!dict) return null;
+    var k1 = norm(nome);
+    var k2 = k1.replace(/[^a-z0-9]/g, '');
+    return dict[k1] || dict[k2] || null;
+  }
 
   window.leafletMap = map;
   window.geojsonSuper = SUPER;
@@ -760,18 +846,8 @@ function(el, x, data) {
     bubblingMouseEvents: false,
     onEachFeature: function(f, layer) {
       var nome = f.properties.nome;
-      var sm = superMetrics[nome] || { total: 0, prio: 0, sistran: 0 };
-      var tipHtml = '<div class="mdn-tip-super">' +
-                      '<div class="mdn-tip-super-title">' + esc(nome) + '</div>' +
-                      '<div class="mdn-tip-super-line"><span>Total de Municípios:</span> <strong>' + sm.total + '</strong></div>' +
-                      '<div class="mdn-tip-super-line"><span>Aderidos ao Sistran:</span> <strong>' + sm.sistran + '</strong></div>' +
-                    '</div>';
       layer.on('mouseover', function(e) {
         layer.setStyle({fillColor: sel === null ? '#C2C2C2' : '#858585'});
-        mostrarTooltip(tipHtml, e);
-      });
-      layer.on('mousemove', function(e) {
-        reposicionarTooltip(e);
       });
       layer.on('mouseout', function() {
         superLayer.resetStyle(layer);
@@ -1029,6 +1105,53 @@ function(el, x, data) {
     var pmVal = p.pm ? esc(p.pm) + (p.pf_pm ? ' <span class="pf">(' + esc(p.pf_pm) + ')</span>' : '') : '—';
     var rodVal = rodoviasTags ? ('<div class="mdn-popup-rodovias">' + rodoviasTags + '</div>') : '<span class="mdn-sem-rodovia">—</span>';
 
+    // Responsáveis pela Superintendência DETRAN-SP
+    var cSuper = getContatoSuper(p.super);
+    var superTitulo = (cSuper && cSuper.superintendencia) ? cSuper.superintendencia : (p.super || 'Não informada');
+    var supNome = cSuper ? cSuper.superintendente_nome : '';
+    var supTel = cSuper ? cSuper.superintendente_tel : '';
+    var supEmail = cSuper ? cSuper.superintendente_email : '';
+    var adjNome = cSuper ? cSuper.adjunto_nome : '';
+    var adjTel = cSuper ? cSuper.adjunto_tel : '';
+    var adjEmail = cSuper ? cSuper.adjunto_email : '';
+
+    function formatarLidPopup(nomeVal, telVal, emailVal, ehAdjunto) {
+      var partes = [];
+      if (nomeVal) {
+        partes.push('<strong>' + esc(nomeVal) + '</strong>');
+      } else {
+        partes.push('<span class="tb-placeholder-text">' + (ehAdjunto ? 'Não designado' : 'Não informado') + '</span>');
+      }
+      if (telVal && telVal.trim()) {
+        var tels = telVal.split(/[\/\n\r]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+        var telLinks = tels.map(function(t) {
+          return '<a href="tel:' + t.replace(/\D/g, '') + '" class="tb-contact-link" title="Ligar para ' + esc(t) + '"><i class="bi bi-telephone-fill tb-link-icon"></i> ' + esc(t) + '</a>';
+        }).join('<span class="tb-tel-sep">/</span>');
+        partes.push(telLinks);
+      }
+      if (emailVal && emailVal.trim()) {
+        partes.push('<a href="mailto:' + esc(emailVal.trim()) + '" class="tb-contact-link" title="Enviar e-mail para ' + esc(emailVal.trim()) + '"><i class="bi bi-envelope-fill tb-link-icon"></i> ' + esc(emailVal.trim()) + '</a>');
+      }
+      return partes.join(' <span class="mdn-popup-lid-sep">•</span> ');
+    }
+
+    var superLidHtml =
+      '<div class="mdn-popup-section-title">Superintendência DETRAN-SP (' + esc(superTitulo) + ')</div>' +
+      '<div class="mdn-popup-super-box">' +
+        '<div class="mdn-popup-super-row">' +
+          '<div class="mdn-popup-super-cargo"><i class="bi bi-person-badge-fill"></i> Superintendente:</div>' +
+          '<div class="mdn-popup-super-content">' +
+            formatarLidPopup(supNome, supTel, supEmail, false) +
+          '</div>' +
+        '</div>' +
+        '<div class="mdn-popup-super-row adjunto">' +
+          '<div class="mdn-popup-super-cargo adjunto"><i class="bi bi-person-badge"></i> Adjunto:</div>' +
+          '<div class="mdn-popup-super-content">' +
+            formatarLidPopup(adjNome, adjTel, adjEmail, true) +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
     var h = '<div class="mdn-popup-card">' +
               '<div class="mdn-popup-hdr">' +
                 '<div class="mdn-popup-title">' + esc(p.nome) + '</div>' +
@@ -1054,7 +1177,8 @@ function(el, x, data) {
                   '<span class="mdn-pillar ' + (fazAcoes ? 'sim' : 'nao') + '">' + (fazAcoes ? '✅ ' : '❌ ') + txtAcoes + '</span>' +
                   '<span class="mdn-pillar ' + (fazAbord ? 'sim' : 'nao') + '">' + (fazAbord ? '✅ ' : '❌ ') + txtAbord + '</span>' +
                 '</div>' +
-                '<div class="mdn-popup-section-title">Divisões Regionais e Rodovias</div>' +
+                superLidHtml +
+                '<div class="mdn-popup-section-title">Divisões Regionais Parceiras e Rodovias</div>' +
                 '<div class="mdn-popup-grid-orgaos">' +
                   '<div class="mdn-popup-grid-item">' +
                     '<div class="mdn-grid-item-lbl">DER-SP</div>' +
@@ -1511,6 +1635,7 @@ function(el, x, data) {
         '<div class="mdn-prio-tit-box">' +
           '<div class="mdn-prio-tit" id="mdn-prio-tit">Priorização de Municípios</div>' +
           '<div class="mdn-prio-sub" id="mdn-prio-sub">Selecione uma superintendência</div>' +
+          '<div class="mdn-prio-super-lideranca" id="mdn-prio-super-lideranca" style="display:none;"></div>' +
         '</div>' +
         '<button type="button" class="mdn-prio-fechar" title="Fechar painel">&times;</button>' +
       '</div>' +
@@ -1615,6 +1740,45 @@ function(el, x, data) {
     } else {
       titEl.textContent = 'Priorização: ' + sel;
       subEl.textContent = 'Superintendência do Detran-SP';
+    }
+
+    var lidEl = painelDiv.querySelector('#mdn-prio-super-lideranca');
+    if (lidEl) {
+      if (sel !== null) {
+        var c = getContatoSuper(sel);
+        if (c && (c.superintendente_nome || c.adjunto_nome)) {
+          var hLid = '<div class="mdn-prio-lid-box">';
+          if (c.superintendente_nome) {
+            var telSupClean = (c.superintendente_tel || '').replace(/\D/g, '');
+            hLid += '<div class="mdn-prio-lid-item">' +
+                      '<span class="mdn-prio-lid-cargo"><i class="bi bi-person-badge-fill"></i> Superintendente:</span> ' +
+                      '<strong>' + esc(c.superintendente_nome) + '</strong>' +
+                      '<div class="mdn-prio-lid-links">' +
+                        (c.superintendente_tel ? '<a href="tel:' + telSupClean + '" title="Ligar"><i class="bi bi-telephone-fill"></i> ' + esc(c.superintendente_tel) + '</a>' : '') +
+                        (c.superintendente_email ? '<a href="mailto:' + esc(c.superintendente_email) + '" title="Enviar E-mail"><i class="bi bi-envelope-fill"></i> ' + esc(c.superintendente_email) + '</a>' : '') +
+                      '</div>' +
+                    '</div>';
+          }
+          if (c.adjunto_nome) {
+            var telAdjClean = (c.adjunto_tel || '').replace(/\D/g, '');
+            hLid += '<div class="mdn-prio-lid-item">' +
+                      '<span class="mdn-prio-lid-cargo"><i class="bi bi-person-badge"></i> Adjunto:</span> ' +
+                      '<strong>' + esc(c.adjunto_nome) + '</strong>' +
+                      '<div class="mdn-prio-lid-links">' +
+                        (c.adjunto_tel ? '<a href="tel:' + telAdjClean + '" title="Ligar"><i class="bi bi-telephone-fill"></i> ' + esc(c.adjunto_tel) + '</a>' : '') +
+                        (c.adjunto_email ? '<a href="mailto:' + esc(c.adjunto_email) + '" title="Enviar E-mail"><i class="bi bi-envelope-fill"></i> ' + esc(c.adjunto_email) + '</a>' : '') +
+                      '</div>' +
+                    '</div>';
+          }
+          hLid += '</div>';
+          lidEl.innerHTML = hLid;
+          lidEl.style.display = 'block';
+        } else {
+          lidEl.style.display = 'none';
+        }
+      } else {
+        lidEl.style.display = 'none';
+      }
     }
 
     var featsBase = MUN.features.filter(function(f) {
@@ -1848,8 +2012,9 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
   addProviderTiles("Esri.WorldGrayCanvas") |>
   fitBounds(lng1 = bb[["xmin"]], lat1 = bb[["ymin"]],
             lng2 = bb[["xmax"]], lat2 = bb[["ymax"]]) |>
-  onRender(js, data = list(super = para_geojson(super_js),
-                           mun   = para_geojson(mun_js)))
+  onRender(js, data = list(super    = para_geojson(super_js),
+                           mun      = para_geojson(mun_js),
+                           contatos = contatos_super_json))
 ```
 
 # Tabela de Dados {icon="table"}
@@ -2148,6 +2313,47 @@ cat(r"---(
 
 <script>
 (function() {
+  var DIC_CONTATOS_PADRAO = {
+    "aracatuba": { "superintendencia": "Araçatuba", "superintendente_nome": "JOÃO MORAES FAGA NETO", "superintendente_email": "joao.neto@detran.sp.gov.br", "superintendente_tel": "(17) 98168-1745", "adjunto_nome": "José Guilherme Bernardes", "adjunto_email": "jose.bernardes@detran.sp.gov.br", "adjunto_tel": "(18) 996654339" },
+    "araraquara": { "superintendencia": "Araraquara", "superintendente_nome": "ERICA PRISCILA DE CARVALHO SANTOS", "superintendente_email": "erica.santos@detran.sp.gov.br", "superintendente_tel": "(16) 99347-7825", "adjunto_nome": "Joao Ricardo Inacio da Silva Silveira", "adjunto_email": "joao.silveira@detran.sp.gov.br", "adjunto_tel": "(16) 98108-7955" },
+    "bauru": { "superintendencia": "Bauru", "superintendente_nome": "ALEX MACHADO GOMES", "superintendente_email": "alex.gomes@detran.sp.gov.br", "superintendente_tel": "(14) 99870-6757", "adjunto_nome": "Fernanda Cury Pereira da Silva", "adjunto_email": "fernanda.cpsilva@detran.sp.gov.br", "adjunto_tel": "(14) 98126-4396" },
+    "piracicaba": { "superintendencia": "Piracicaba", "superintendente_nome": "DANIEL FERNANDO ROMERA", "superintendente_email": "daniel.romera@detran.sp.gov.br", "superintendente_tel": "(19) 98139-4041", "adjunto_nome": "Aparecida Rosemary Castoldo Lopes da Cunha", "adjunto_email": "aparecida.cunha@detran.sp.gov.br", "adjunto_tel": "(19) 99719-5800" },
+    "campinas": { "superintendencia": "Campinas", "superintendente_nome": "ANDERSON LUIS CERVANTES PEREIRA", "superintendente_email": "anderson.cpereira@detran.sp.gov.br", "superintendente_tel": "(19) 97409-9847", "adjunto_nome": "Cassiano Ricardo Brito Ramos", "adjunto_email": "cassiano.ramos@detran.sp.gov.br", "adjunto_tel": "(19) 98821-2197" },
+    "fernandopolis": { "superintendencia": "Fernandópolis", "superintendente_nome": "GISLAINE DE ARAÚJO SIMPLES", "superintendente_email": "gislaine.simples@detran.sp.gov.br", "superintendente_tel": "(17) 99153-2280", "adjunto_nome": "Camila Mara Ramos Leal", "adjunto_email": "camila.ramos@detran.sp.gov.br", "adjunto_tel": "(17)991687825" },
+    "franca": { "superintendencia": "Franca", "superintendente_nome": "EDNEIA COSTA DO NASCIMENTO", "superintendente_email": "edneia.nascimento@detran.sp.gov.br", "superintendente_tel": "(16) 99130-7825 / (11) 97066-7549", "adjunto_nome": "Marcelo de Melo Silva", "adjunto_email": "marcelo.silva@detran.sp.gov.br", "adjunto_tel": "(16) 99412-0444 / (11) 99208-7819" },
+    "guarulhos": { "superintendencia": "Guarulhos", "superintendente_nome": "VIVIANA MACEDO DOS SANTOS", "superintendente_email": "viviana.santos@detran.sp.gov.br", "superintendente_tel": "(11)94260-5029", "adjunto_nome": "Claudia Oliveira Carvalho Silva", "adjunto_email": "claudia.csilva@detran.sp.gov.br", "adjunto_tel": "(11) 9 5394-0145" },
+    "itapeva": { "superintendencia": "Itapeva", "superintendente_nome": "ADAUTO ROCHA TEIXEIRA JUNIOR", "superintendente_email": "adauto.junior@detran.sp.gov.br", "superintendente_tel": "(15) 99104-0697", "adjunto_nome": "João Antonio Grupp", "adjunto_email": "joao.grupp@detran.sp.gov.br", "adjunto_tel": "(11) 97064-6321 / (15) 99645-7595" },
+    "jundiai": { "superintendencia": "Jundiaí", "superintendente_nome": "NAYARA PEREIRA CINACHI", "superintendente_email": "nayara.cinachi@detran.sp.gov.br", "superintendente_tel": "(12) 98823-0227", "adjunto_nome": "Henrique Silva Bueno", "adjunto_email": "henrique.bueno@detran.sp.gov.br", "adjunto_tel": "17 99122-6754" },
+    "osasco": { "superintendencia": "Osasco", "superintendente_nome": "SANDRO LOURENÇO DE FARIAS", "superintendente_email": "sandro.farias@detran.sp.gov.br", "superintendente_tel": "(11) 98476-7580", "adjunto_nome": "Karin Müller", "adjunto_email": "karin.muller@detran.sp.gov.br", "adjunto_tel": "(11) 99417-9784" },
+    "presidenteprudente": { "superintendencia": "Presidente Prudente", "superintendente_nome": "FERNANDA MARIANO BATISTA", "superintendente_email": "fernanda.mbatista@detran.sp.gov.br", "superintendente_tel": "(18) 99164-6366", "adjunto_nome": "Aline de Souza Mazzi", "adjunto_email": "aline.mazzi@detran.sp.gov.br", "adjunto_tel": "18 99148-9941" },
+    "presidente prudente": { "superintendencia": "Presidente Prudente", "superintendente_nome": "FERNANDA MARIANO BATISTA", "superintendente_email": "fernanda.mbatista@detran.sp.gov.br", "superintendente_tel": "(18) 99164-6366", "adjunto_nome": "Aline de Souza Mazzi", "adjunto_email": "aline.mazzi@detran.sp.gov.br", "adjunto_tel": "18 99148-9941" },
+    "registro": { "superintendencia": "Registro", "superintendente_nome": "AILTON CARLOS MEANDA PEREIRA", "superintendente_email": "ailton.pereira@detran.sp.gov.br", "superintendente_tel": "(13) 99797-5232", "adjunto_nome": "José Claudemir dos Santos", "adjunto_email": "jose.csantos@detran.sp.gov.br", "adjunto_tel": "(13) 99603-6710" },
+    "ribeiraopreto": { "superintendencia": "Ribeirão Preto", "superintendente_nome": "MARCELO CADELCA DE MELO", "superintendente_email": "marcelo.melo@detran.sp.gov.br", "superintendente_tel": "(16) 99177-6020", "adjunto_nome": "Felipe Favero da Silva", "adjunto_email": "felipe.fsilva@detran.sp.gov.br", "adjunto_tel": "(16) 99796-6311" },
+    "ribeirao preto": { "superintendencia": "Ribeirão Preto", "superintendente_nome": "MARCELO CADELCA DE MELO", "superintendente_email": "marcelo.melo@detran.sp.gov.br", "superintendente_tel": "(16) 99177-6020", "adjunto_nome": "Felipe Favero da Silva", "adjunto_email": "felipe.fsilva@detran.sp.gov.br", "adjunto_tel": "(16) 99796-6311" },
+    "santos": { "superintendencia": "Santos", "superintendente_nome": "MAURO SERGIO MOREIRA", "superintendente_email": "mauro.moreira@detran.sp.gov.br", "superintendente_tel": "(11) 97055-7816", "adjunto_nome": "Leonardo Ortiz", "adjunto_email": "leonardo.ortiz@detran.sp.gov.br", "adjunto_tel": "(13) 97404-6672" },
+    "saobernardodocampo": { "superintendencia": "São Bernardo do Campo", "superintendente_nome": "TALITA CAROLINA DE MELO NUNES", "superintendente_email": "talita.nunes@detran.sp.gov.br", "superintendente_tel": "", "adjunto_nome": "", "adjunto_email": "", "adjunto_tel": "" },
+    "sao bernardo do campo": { "superintendencia": "São Bernardo do Campo", "superintendente_nome": "TALITA CAROLINA DE MELO NUNES", "superintendente_email": "talita.nunes@detran.sp.gov.br", "superintendente_tel": "", "adjunto_nome": "", "adjunto_email": "", "adjunto_tel": "" },
+    "saojosedoriopreto": { "superintendencia": "São José do Rio Preto", "superintendente_nome": "AMANDA COUTO", "superintendente_email": "amanda.couto@detran.sp.gov.br", "superintendente_tel": "(17) 98116-7286", "adjunto_nome": "Vanessa Barco Guimarães", "adjunto_email": "vanessa.guimaraes@detran.sp.gov.br", "adjunto_tel": "(17) 99646-0770" },
+    "sao jose do rio preto": { "superintendencia": "São José do Rio Preto", "superintendente_nome": "AMANDA COUTO", "superintendente_email": "amanda.couto@detran.sp.gov.br", "superintendente_tel": "(17) 98116-7286", "adjunto_nome": "Vanessa Barco Guimarães", "adjunto_email": "vanessa.guimaraes@detran.sp.gov.br", "adjunto_tel": "(17) 99646-0770" },
+    "saojosedoscampos": { "superintendencia": "São José dos Campos", "superintendente_nome": "JONAS LEANDRO CASTILHO SILVA", "superintendente_email": "jonas.silva@detran.sp.gov.br", "superintendente_tel": "(12) 99255-0163", "adjunto_nome": "Marcelino Israel dos Santos Ribeiro", "adjunto_email": "marcelino.ribeiro@detran.sp.gov.br", "adjunto_tel": "(12) 99109-0326" },
+    "sao jose dos campos": { "superintendencia": "São José dos Campos", "superintendente_nome": "JONAS LEANDRO CASTILHO SILVA", "superintendente_email": "jonas.silva@detran.sp.gov.br", "superintendente_tel": "(12) 99255-0163", "adjunto_nome": "Marcelino Israel dos Santos Ribeiro", "adjunto_email": "marcelino.ribeiro@detran.sp.gov.br", "adjunto_tel": "(12) 99109-0326" },
+    "saopaulo": { "superintendencia": "São Paulo", "superintendente_nome": "EDUARDO CHAVES DA SILVA GOMES", "superintendente_email": "eduardo.gomes@detran.sp.gov.br", "superintendente_tel": "(12) 99740-1196", "adjunto_nome": "Alexandra Rocha da Silva", "adjunto_email": "alexandra.silva@detran.sp.gov.br", "adjunto_tel": "(17) 98808-9307" },
+    "sao paulo": { "superintendencia": "São Paulo", "superintendente_nome": "EDUARDO CHAVES DA SILVA GOMES", "superintendente_email": "eduardo.gomes@detran.sp.gov.br", "superintendente_tel": "(12) 99740-1196", "adjunto_nome": "Alexandra Rocha da Silva", "adjunto_email": "alexandra.silva@detran.sp.gov.br", "adjunto_tel": "(17) 98808-9307" },
+    "sorocaba": { "superintendencia": "Sorocaba", "superintendente_nome": "RICARDO MENDES PEREIRA MUELLER", "superintendente_email": "ricardo.mueller@detran.sp.gov.br", "superintendente_tel": "(15) 98815-3001", "adjunto_nome": "Alexandre Albuquerque Diniz Kamibeppu", "adjunto_email": "alexandre.kamibeppu@detran.sp.gov.br", "adjunto_tel": "15991377345 / 11966261853" }
+  };
+  if (!window.contatosSuperintendentes || Object.keys(window.contatosSuperintendentes).length === 0) {
+    window.contatosSuperintendentes = DIC_CONTATOS_PADRAO;
+  }
+
+  function getContatoSuper(nome) {
+    if (!nome) return null;
+    var dict = window.contatosSuperintendentes || DIC_CONTATOS_PADRAO;
+    if (!dict) return null;
+    var k1 = norm(nome);
+    var k2 = k1.replace(/[^a-z0-9]/g, '');
+    return dict[k1] || dict[k2] || null;
+  }
+
   var todosMunicipios = [];
   var municipiosFiltrados = [];
   var paginaAtual = 1;
@@ -2798,9 +3004,14 @@ cat(r"---(
       var dersMap = {}, dersPf = {};
       var pmsMap = {}, pmsPf = {};
       var sesMap = {}, sesPf = {};
+      var supersMap = {};
       var artespMuns = [], anttMuns = [], prfMuns = [];
 
       selMuns.forEach(function(m) {
+        if (m.super) {
+          if (!supersMap[m.super]) supersMap[m.super] = [];
+          supersMap[m.super].push(m.nome);
+        }
         if (m.der) {
           if (!dersMap[m.der]) dersMap[m.der] = [];
           dersMap[m.der].push(m.nome);
@@ -2819,6 +3030,23 @@ cat(r"---(
         if (m.artesp) artespMuns.push(m.nome);
         if (m.antt) anttMuns.push(m.nome);
         if (m.prf) prfMuns.push(m.nome);
+      });
+
+      // Superintendências do DETRAN-SP
+      Object.keys(supersMap).sort().forEach(function(sNome) {
+        var c = getContatoSuper(sNome);
+        var infoContatos = 'Não cadastrado';
+        if (c) {
+          var partes = [];
+          if (c.superintendente_nome) {
+            partes.push('Superintendente: ' + c.superintendente_nome + (c.superintendente_tel ? ' (Tel: ' + c.superintendente_tel + ')' : '') + (c.superintendente_email ? ' [' + c.superintendente_email + ']' : ''));
+          }
+          if (c.adjunto_nome) {
+            partes.push('Adjunto: ' + c.adjunto_nome + (c.adjunto_tel ? ' (Tel: ' + c.adjunto_tel + ')' : '') + (c.adjunto_email ? ' [' + c.adjunto_email + ']' : ''));
+          }
+          infoContatos = partes.join(' / ');
+        }
+        addOrgao('DETRAN-SP', 'Superintendência em ' + (c && c.superintendencia ? c.superintendencia : sNome), infoContatos, supersMap[sNome]);
       });
 
       Object.keys(dersMap).sort().forEach(function(d) {
@@ -2949,9 +3177,14 @@ cat(r"---(
     var dersMap = {};
     var pmsMap = {};
     var sesMap = {};
+    var supersMap = {};
     var prfMuns = [];
 
     selMuns.forEach(function(m) {
+      if (m.super) {
+        if (!supersMap[m.super]) supersMap[m.super] = [];
+        supersMap[m.super].push(m.nome);
+      }
       if (m.der) {
         if (!dersMap[m.der]) dersMap[m.der] = [];
         dersMap[m.der].push(m.nome);
@@ -2967,7 +3200,7 @@ cat(r"---(
       if (m.prf) prfMuns.push(m.nome);
     });
 
-    var totalDivisoes = Object.keys(dersMap).length + Object.keys(pmsMap).length + Object.keys(sesMap).length + (prfMuns.length > 0 ? 1 : 0);
+    var totalDivisoes = Object.keys(supersMap).length + Object.keys(dersMap).length + Object.keys(pmsMap).length + Object.keys(sesMap).length + (prfMuns.length > 0 ? 1 : 0);
     var subinfo = document.getElementById('tb-drawer-subinfo');
     if (subinfo) {
       subinfo.textContent = '| ' + totalDivisoes + (totalDivisoes === 1 ? ' divisão regional envolvida' : ' divisões regionais envolvidas');
@@ -2990,6 +3223,87 @@ cat(r"---(
     var gridEl = document.getElementById('tb-orgs-grid');
     if (gridEl) {
       var cardsHtml = '';
+
+      function formatarTelefones(telStr) {
+        if (!telStr || !telStr.trim()) return '<span class="tb-placeholder-text">Não informado</span>';
+        var partes = telStr.split(/[\/\n\r]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+        if (!partes.length) return '<span class="tb-placeholder-text">Não informado</span>';
+        return partes.map(function(p) {
+          var rawDigits = p.replace(/\D/g, '');
+          return '<a href="tel:' + rawDigits + '" class="tb-contact-link"><i class="bi bi-telephone-fill tb-link-icon"></i> ' + esc(p) + '</a>';
+        }).join('<span class="tb-tel-sep">/</span>');
+      }
+
+      function formatarEmail(emailStr) {
+        if (!emailStr || !emailStr.trim()) return '<span class="tb-placeholder-text">Não informado</span>';
+        var email = emailStr.trim();
+        return '<a href="mailto:' + esc(email) + '" class="tb-contact-link"><i class="bi bi-envelope-fill tb-link-icon"></i> ' + esc(email) + '</a>';
+      }
+
+      function renderCardSuperintendencia(superNome, munsList) {
+        var c = getContatoSuper(superNome);
+        var superTitulo = c && c.superintendencia ? c.superintendencia : superNome;
+        
+        var superNomeVal = c ? c.superintendente_nome : '';
+        var superEmailVal = c ? c.superintendente_email : '';
+        var superTelVal = c ? c.superintendente_tel : '';
+
+        var adjuntoNomeVal = c ? c.adjunto_nome : '';
+        var adjuntoEmailVal = c ? c.adjunto_email : '';
+        var adjuntoTelVal = c ? c.adjunto_tel : '';
+
+        var h = '<div class="tb-org-card tb-org-detran">';
+        h += '  <div class="tb-org-header" style="background-color: #004077; color: #ffffff;">';
+        h += '    <div class="tb-org-header-title">';
+        h += '      <i class="bi bi-building-fill-gear" style="color: #ffffff;"></i>';
+        h += '      <span>DETRAN-SP</span>';
+        h += '    </div>';
+        h += '    <span class="tb-org-divisao-badge" style="color: #ffffff;">Superintendência em ' + esc(superTitulo) + '</span>';
+        h += '  </div>';
+        h += '  <div class="tb-org-body">';
+        h += '    <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">Departamento Estadual de Trânsito • Superintendência: <strong>' + esc(superTitulo) + '</strong></div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-person-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Superintendente:</span>';
+        h += '      <span class="tb-contact-val">' + (superNomeVal ? '<strong>' + esc(superNomeVal) + '</strong>' : '<span class="tb-placeholder-text">Não informado</span>') + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-telephone-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Telefone:</span>';
+        h += '      <span class="tb-contact-val">' + formatarTelefones(superTelVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-envelope-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">E-mail:</span>';
+        h += '      <span class="tb-contact-val">' + formatarEmail(superEmailVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row" style="border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 2px;">';
+        h += '      <i class="bi bi-person-badge tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Adjunto:</span>';
+        h += '      <span class="tb-contact-val">' + (adjuntoNomeVal ? '<strong>' + esc(adjuntoNomeVal) + '</strong>' : '<span class="tb-placeholder-text">Não informado / Não designado</span>') + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-telephone-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Telefone:</span>';
+        h += '      <span class="tb-contact-val">' + formatarTelefones(adjuntoTelVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-envelope-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">E-mail:</span>';
+        h += '      <span class="tb-contact-val">' + formatarEmail(adjuntoEmailVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-org-footer-muns">';
+        h += '      <strong>Municípios abrangidos (' + munsList.length + '):</strong>';
+        h += '      <div class="tb-muns-chips-container">';
+        munsList.forEach(function(nm) {
+          h += '<span class="tb-chip-mun">' + esc(nm) + '</span>';
+        });
+        h += '      </div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '</div>';
+        return h;
+      }
 
       function renderCard(orgaoNome, titulo, cor, icone, divisaoNome, rotuloDiv, munsList, orgClass, txtCor) {
         var textStyle = txtCor ? 'color: ' + txtCor + ';' : '';
@@ -3040,6 +3354,11 @@ cat(r"---(
         h += '</div>';
         return h;
       }
+
+      // 0. DETRAN-SP: Superintendência(s) envolvida(s)
+      Object.keys(supersMap).sort().forEach(function(sNome) {
+        cardsHtml += renderCardSuperintendencia(sNome, supersMap[sNome]);
+      });
 
       // 1. DER-SP (Amarelo Institucional #ffd700)
       Object.keys(dersMap).sort().forEach(function(dr) {
