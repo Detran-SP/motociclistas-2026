@@ -9867,101 +9867,29 @@ tr.tr-selected:hover {
   border-top: 1px dashed #bae6fd;
 }
 
-/* DETRAN-SP: Card Executivo Compacto da Superintendência (#004077) */
+/* DETRAN-SP: Azul Oficial DETRAN (#004077) */
 .tb-org-card.tb-org-detran {
-  border: 1.5px solid #004077 !important;
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 64, 119, 0.08) !important;
-  grid-column: 1 / -1;
-  overflow: hidden;
+  border: 2px solid #004077 !important;
 }
-.tb-detran-compact-header {
-  background: #004077;
-  color: #ffffff;
-  padding: 6px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.tb-org-card.tb-org-detran .tb-org-header {
+  background: #004077 !important;
+  color: #ffffff !important;
 }
-.tb-detran-compact-title {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+.tb-org-card.tb-org-detran .tb-org-header i {
+  color: #ffffff !important;
 }
-.tb-detran-compact-title i {
-  color: #60a5fa;
-  font-size: 14px;
+.tb-org-card.tb-org-detran .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
 }
-.tb-detran-muns-pill {
-  font-size: 11px;
-  font-weight: 600;
-  color: #bfdbfe;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 1px 7px;
-  border-radius: 10px;
-}
-.tb-detran-tag-lideranca {
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-.tb-detran-compact-body {
-  padding: 7px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #f8fafc;
-}
-.tb-detran-inline-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  gap: 8px;
-  font-size: 11.5px;
-  color: #1e293b;
-  overflow-x: auto;
-  padding: 2px 0;
-}
-.tb-detran-cargo-badge {
-  font-size: 11px;
-  font-weight: 700;
+.tb-org-card.tb-org-detran .tb-chip-mun {
+  background: #e0f2fe;
   color: #004077;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  min-width: 140px;
+  border: 1px solid #bae6fd;
 }
-.tb-detran-cargo-badge.adjunto {
-  color: #475569;
-}
-.tb-detran-inline-nome {
-  font-weight: 600;
-  color: #0f172a;
-  flex-shrink: 0;
-}
-.tb-detran-sep {
-  color: #cbd5e1;
-  font-weight: bold;
-  flex-shrink: 0;
-}
-.tb-detran-inline-item {
-  color: #334155;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+.tb-org-card.tb-org-detran .tb-org-footer-muns {
+  border-top: 1px dashed #bae6fd;
 }
 
 .tb-contact-link {
@@ -12234,44 +12162,53 @@ grid-auto-rows: minmax(0, 1fr);">
         var adjuntoTelVal = c ? c.adjunto_tel : '';
 
         var h = '<div class="tb-org-card tb-org-detran">';
-        h += '  <div class="tb-detran-compact-header">';
-        h += '    <div class="tb-detran-compact-title">';
-        h += '      <i class="bi bi-building-fill-gear"></i>';
-        h += '      <span>DETRAN-SP • Superintendência em ' + esc(superTitulo) + '</span>';
-        h += '      <span class="tb-detran-muns-pill">' + munsList.length + (munsList.length === 1 ? ' município' : ' municípios') + '</span>';
+        h += '  <div class="tb-org-header" style="background-color: #004077; color: #ffffff;">';
+        h += '    <div class="tb-org-header-title">';
+        h += '      <i class="bi bi-building-fill-gear" style="color: #ffffff;"></i>';
+        h += '      <span>DETRAN-SP</span>';
         h += '    </div>';
-        h += '    <span class="tb-detran-tag-lideranca">Liderança Executiva</span>';
+        h += '    <span class="tb-org-divisao-badge" style="color: #ffffff;">Superintendência em ' + esc(superTitulo) + '</span>';
         h += '  </div>';
-        h += '  <div class="tb-detran-compact-body">';
-        
-        // Linha 1: Superintendente
-        h += '    <div class="tb-detran-inline-row">';
-        h += '      <span class="tb-detran-cargo-badge"><i class="bi bi-person-badge-fill"></i> Superintendente:</span>';
-        h += '      <span class="tb-detran-inline-nome">' + (superNomeVal ? '<strong>' + esc(superNomeVal) + '</strong>' : '<span class="tb-placeholder-text">Não informado</span>') + '</span>';
-        if (superTelVal && superTelVal.trim()) {
-          h += '      <span class="tb-detran-sep">•</span>';
-          h += '      <span class="tb-detran-inline-item">' + formatarTelefones(superTelVal) + '</span>';
-        }
-        if (superEmailVal && superEmailVal.trim()) {
-          h += '      <span class="tb-detran-sep">•</span>';
-          h += '      <span class="tb-detran-inline-item">' + formatarEmail(superEmailVal) + '</span>';
-        }
+        h += '  <div class="tb-org-body">';
+        h += '    <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">Departamento Estadual de Trânsito • Superintendência: <strong>' + esc(superTitulo) + '</strong></div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-person-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Superintendente:</span>';
+        h += '      <span class="tb-contact-val">' + (superNomeVal ? '<strong>' + esc(superNomeVal) + '</strong>' : '<span class="tb-placeholder-text">Não informado</span>') + '</span>';
         h += '    </div>';
-
-        // Linha 2: Adjunto
-        h += '    <div class="tb-detran-inline-row adjunto">';
-        h += '      <span class="tb-detran-cargo-badge adjunto"><i class="bi bi-person-badge"></i> Adjunto:</span>';
-        h += '      <span class="tb-detran-inline-nome">' + (adjuntoNomeVal ? '<strong>' + esc(adjuntoNomeVal) + '</strong>' : '<span class="tb-placeholder-text">Não informado / Não designado</span>') + '</span>';
-        if (adjuntoTelVal && adjuntoTelVal.trim()) {
-          h += '      <span class="tb-detran-sep">•</span>';
-          h += '      <span class="tb-detran-inline-item">' + formatarTelefones(adjuntoTelVal) + '</span>';
-        }
-        if (adjuntoEmailVal && adjuntoEmailVal.trim()) {
-          h += '      <span class="tb-detran-sep">•</span>';
-          h += '      <span class="tb-detran-inline-item">' + formatarEmail(adjuntoEmailVal) + '</span>';
-        }
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-telephone-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Telefone:</span>';
+        h += '      <span class="tb-contact-val">' + formatarTelefones(superTelVal) + '</span>';
         h += '    </div>';
-
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-envelope-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">E-mail:</span>';
+        h += '      <span class="tb-contact-val">' + formatarEmail(superEmailVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row" style="border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 2px;">';
+        h += '      <i class="bi bi-person-badge tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Adjunto:</span>';
+        h += '      <span class="tb-contact-val">' + (adjuntoNomeVal ? '<strong>' + esc(adjuntoNomeVal) + '</strong>' : '<span class="tb-placeholder-text">Não informado / Não designado</span>') + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-telephone-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Telefone:</span>';
+        h += '      <span class="tb-contact-val">' + formatarTelefones(adjuntoTelVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-envelope-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">E-mail:</span>';
+        h += '      <span class="tb-contact-val">' + formatarEmail(adjuntoEmailVal) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-org-footer-muns">';
+        h += '      <strong>Municípios abrangidos (' + munsList.length + '):</strong>';
+        h += '      <div class="tb-muns-chips-container">';
+        munsList.forEach(function(nm) {
+          h += '<span class="tb-chip-mun">' + esc(nm) + '</span>';
+        });
+        h += '      </div>';
+        h += '    </div>';
         h += '  </div>';
         h += '</div>';
         return h;
