@@ -351,6 +351,52 @@ if (!is.null(p_drs)) {
   }, error = function(e) NULL)
 }
 
+# ---- Contatos do DER-SP via data/contatos_der.csv ----
+contatos_der_json <- "{}"
+p_der <- ler_csv_path("contatos_der.csv")
+if (!is.null(p_der)) {
+  tryCatch({
+    df_der <- read.csv(p_der, sep = ";", fileEncoding = "latin1", stringsAsFactors = FALSE, check.names = FALSE)
+    lista_der <- list()
+    for (i in seq_len(nrow(df_der))) {
+      reg_raw <- trimws(as.character(df_der[[1]][i]))
+      nm_resp <- trimws(as.character(df_der[[2]][i]))
+      cargo_raw <- trimws(as.character(df_der[[3]][i]))
+      cargo_limpo <- gsub("Coo+rdenador", "Coordenador", cargo_raw, ignore.case = TRUE)
+      cargo_limpo <- gsub("Coordernador", "Coordenador", cargo_limpo, ignore.case = TRUE)
+      cargo_limpo <- gsub("Coordanadora", "Coordenadora", cargo_limpo, ignore.case = TRUE)
+      email_val <- trimws(as.character(df_der[[4]][i]))
+      tel_val <- trimws(as.character(df_der[[5]][i]))
+      
+      num_match <- stringr::str_extract(reg_raw, "\\d+")
+      dr_num <- if (!is.na(num_match)) as.integer(num_match) else NA_integer_
+      
+      item <- list(
+        regional = reg_raw,
+        codigo   = if (!is.na(dr_num)) sprintf("DR%02d", dr_num) else reg_raw,
+        nome     = nm_resp,
+        cargo    = cargo_limpo,
+        email    = email_val,
+        telefone = tel_val
+      )
+      
+      reg_ascii <- trimws(stringi::stri_trans_general(reg_raw, "Latin-ASCII"))
+      k_reg <- tolower(gsub("[^a-zA-Z0-9]+", "", reg_ascii))
+      
+      if (!is.na(dr_num)) {
+        lista_der[[sprintf("dr%02d", dr_num)]] <- item
+        lista_der[[sprintf("dr%d", dr_num)]] <- item
+        lista_der[[sprintf("dr-%d", dr_num)]] <- item
+        lista_der[[sprintf("dr-%02d", dr_num)]] <- item
+      }
+      if (nzchar(k_reg)) {
+        lista_der[[k_reg]] <- item
+      }
+    }
+    contatos_der_json <- jsonlite::toJSON(lista_der, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
 # ---- Contatos dos Superintendentes e Adjuntos via data/contatos_superintendentes.csv ----
 contatos_csv_path <- if (file.exists("../data/contatos_superintendentes.csv")) "../data/contatos_superintendentes.csv" else if (file.exists("data/contatos_superintendentes.csv")) "data/contatos_superintendentes.csv" else NULL
 contatos_super_json <- "{}"
@@ -626,6 +672,43 @@ function(el, x, data) {
       if (dict[m1] || dict[m2]) return dict[m1] || dict[m2];
     }
     return null;
+  };
+
+  var DIC_CONTATOS_DER_PADRAO = {
+    "dr01": { "regional": "DR-1 – Campinas", "codigo": "DR01", "nome": "Cleiton Luiz", "cargo": "Coordenador Regional", "email": "clsousa@sp.gov.br", "telefone": "(19) 99149-3211" },
+    "dr02": { "regional": "DR-2 – Itapetininga", "codigo": "DR02", "nome": "Marcos Armando", "cargo": "Coordenador Geral", "email": "macardoso@der.sp.gov.br", "telefone": "(44) 8447-2992" },
+    "dr03": { "regional": "DR-3 – Bauru", "codigo": "DR03", "nome": "Alessandra Pedroso", "cargo": "Coordenadora Regional", "email": "afpsiqueira@der.sp.gov.br", "telefone": "(12) 99180-7636" },
+    "dr04": { "regional": "DR-4 – Araraquara", "codigo": "DR04", "nome": "Marco Antônio Mantoanelli", "cargo": "Coordenador Geral", "email": "mmantoanelli@sp.gov.br", "telefone": "(16) 98136-7436" },
+    "dr05": { "regional": "DR-5 – Cubatão", "codigo": "DR05", "nome": "Dimer Fattori", "cargo": "Coordenador Regional", "email": "dimerfattori@sp.gov.br", "telefone": "(13) 99695-6635" },
+    "dr06": { "regional": "DR-6 – Taubaté", "codigo": "DR06", "nome": "Camila Fernanda", "cargo": "Coordenadora Regional", "email": "cfblopes@der.sp.gov.br", "telefone": "(49) 9909-2041" },
+    "dr07": { "regional": "DR-7 – Assis", "codigo": "DR07", "nome": "Tais de Almeida", "cargo": "Coordenadora Regional", "email": "tasilva@der.sp.gov.br", "telefone": "(92) 8404-8333" },
+    "dr08": { "regional": "DR-8 – Ribeirão Preto", "codigo": "DR08", "nome": "Erika Patrícia", "cargo": "Coordenadora Regional", "email": "eparosa@der.sp.gov.br", "telefone": "(91) 9232-9519" },
+    "dr09": { "regional": "DR-9 – São José do Rio Preto", "codigo": "DR09", "nome": "Orsi Duarte", "cargo": "Coordenador Regional", "email": "opdjunior@der.sp.gov.br", "telefone": "(65) 8408-3996" },
+    "dr10": { "regional": "DR-10 – São Paulo", "codigo": "DR10", "nome": "Mauro Flavio Cardoso", "cargo": "Coordenador Regional", "email": "maurocardoso@sp.gov.br", "telefone": "(11) 99992-1307" },
+    "dr11": { "regional": "DR-11 – Araçatuba", "codigo": "DR11", "nome": "Cristiano Ramadan", "cargo": "Coordenador Regional", "email": "crcosta@der.sp.gov.br", "telefone": "(17) 99717-4489" },
+    "dr12": { "regional": "DR-12 – Presidente Prudente", "codigo": "DR12", "nome": "Helena de Souza Aguiar Roncador", "cargo": "Coordenadora Regional", "email": "hsaguiar@der.sp.gov.br", "telefone": "(18) 99774-7009" },
+    "dr13": { "regional": "DR-13 – Rio Claro", "codigo": "DR13", "nome": "Flávia Souza", "cargo": "Coordenadora Regional", "email": "fssilva@der.sp.gov.br", "telefone": "(11) 98687-7327" },
+    "dr14": { "regional": "DR-14 – Barretos", "codigo": "DR14", "nome": "Eziel de Oliveira Paulino", "cargo": "Coordenador Regional", "email": "eopaulino@der.sp.gov.br", "telefone": "(18) 99782-7013" }
+  };
+
+  var CONTATOS_DER = (data && data.contatos_der) ? (typeof data.contatos_der === 'string' ? JSON.parse(data.contatos_der) : data.contatos_der) : null;
+  if (!CONTATOS_DER || Object.keys(CONTATOS_DER).length === 0) {
+    CONTATOS_DER = DIC_CONTATOS_DER_PADRAO;
+  }
+  window.contatosDer = CONTATOS_DER;
+
+  window.getContatoDer = function(derNome) {
+    var dict = window.contatosDer || DIC_CONTATOS_DER_PADRAO;
+    if (!dict || !derNome) return null;
+    var k1 = norm(derNome), k2 = k1.replace(/[^a-z0-9]/g, '');
+    var m = k2.match(/dr0*(\d+)/);
+    if (m) {
+      var num = parseInt(m[1], 10);
+      var drCode = 'dr' + (num < 10 ? '0' + num : num);
+      if (dict[drCode]) return dict[drCode];
+      if (dict['dr' + num]) return dict['dr' + num];
+    }
+    return dict[k1] || dict[k2] || null;
   };
 
   window.leafletMap = map;
@@ -2329,7 +2412,8 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
                            contatos_dnit      = contatos_dnit_json,
                            contatos_antt      = contatos_antt_json,
                            contatos_municipal = contatos_municipal_json,
-                           contatos_drs       = contatos_drs_json))
+                           contatos_drs       = contatos_drs_json,
+                           contatos_der       = contatos_der_json))
 ```
 
 # Tabela de Dados {icon="table"}
@@ -3466,7 +3550,17 @@ cat(r"---(
       });
 
       Object.keys(dersMap).sort().forEach(function(d) {
-        addOrgao('DER-SP', d, dersPf[d], dersMap[d]);
+        var c = (typeof getContatoDer === 'function') ? getContatoDer(d) : null;
+        var contatoTxt = dersPf[d] || 'Não cadastrado';
+        if (c && c.nome) {
+          var partes = [c.nome];
+          if (c.cargo) partes.push(c.cargo);
+          if (c.telefone) partes.push('Tel: ' + c.telefone);
+          if (c.email) partes.push('[' + c.email + ']');
+          contatoTxt = partes.join(' / ');
+        }
+        var divLabel = (c && c.regional) ? c.regional : d;
+        addOrgao('DER-SP', divLabel, contatoTxt, dersMap[d]);
       });
       Object.keys(pmsMap).sort().forEach(function(p) {
         addOrgao('PMESP', p, pmsPf[p], pmsMap[p]);
@@ -3816,7 +3910,13 @@ cat(r"---(
 
       // 1. DER-SP (Amarelo Institucional #ffd700)
       Object.keys(dersMap).sort().forEach(function(dr) {
-        cardsHtml += renderCard('DER-SP', 'Departamento de Estradas de Rodagem', '#ffd700', 'bi-signpost-split-fill', dr, 'Divisão Regional', dersMap[dr], 'tb-org-der', '#0f172a');
+        var c = (typeof getContatoDer === 'function') ? getContatoDer(dr) : null;
+        if (c && c.nome) {
+          var divLabel = c.regional || dr;
+          cardsHtml += renderCardComContato('DER-SP', 'Departamento de Estradas de Rodagem', '#ffd700', 'bi-signpost-split-fill', divLabel, 'Divisão Regional', c.nome, c.cargo, c.telefone, c.email, dersMap[dr], 'tb-org-der', '#0f172a');
+        } else {
+          cardsHtml += renderCard('DER-SP', 'Departamento de Estradas de Rodagem', '#ffd700', 'bi-signpost-split-fill', dr, 'Divisão Regional', dersMap[dr], 'tb-org-der', '#0f172a');
+        }
       });
 
       // 2. SES-SP (Verde Claro Saúde #10b981)

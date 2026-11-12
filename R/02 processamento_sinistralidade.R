@@ -62,7 +62,26 @@ if (file.exists("data/mun_sistran.csv")) {
   }
 }
 
-# Atualização de contatos institucionais adicionais (PRF, DNIT, ANTT, SEMOB, SES-SP)
+# Atualização de contatos institucionais adicionais (PRF, DNIT, ANTT, SEMOB, SES-SP, DER-SP)
+if (file.exists("data/contatos_der.csv")) {
+  tb_der <- read.csv("data/contatos_der.csv", sep = ";", fileEncoding = "latin1", stringsAsFactors = FALSE, check.names = FALSE) |> 
+    mutate(
+      num = as.integer(stringr::str_extract(`Divisão Regional`, "\\d+")),
+      DIVISAO_REGIONAL_DER = sprintf("DR%02d", num),
+      DER_REGIAO = trimws(`Divisão Regional`),
+      DER_RESPONSAVEL = trimws(`Nome completo`),
+      DER_CARGO = trimws(`Cargo`),
+      DER_EMAIL = trimws(`E-mail`),
+      DER_TELEFONE = trimws(`Telefone`),
+      PONTO_FOCAL_DER = DER_RESPONSAVEL
+    ) |> 
+    select(DIVISAO_REGIONAL_DER, DER_REGIAO, DER_RESPONSAVEL, DER_CARGO, DER_EMAIL, DER_TELEFONE, PONTO_FOCAL_DER_NEW = PONTO_FOCAL_DER)
+  bd_municipios <- bd_municipios |> 
+    left_join(tb_der, by = "DIVISAO_REGIONAL_DER") |> 
+    mutate(PONTO_FOCAL_DER = coalesce(PONTO_FOCAL_DER_NEW, PONTO_FOCAL_DER)) |> 
+    select(-PONTO_FOCAL_DER_NEW)
+}
+
 if (file.exists("data/contatos_drs.csv")) {
   tb_drs <- read.csv("data/contatos_drs.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
     select(CD_MUN_7 = `Código IBGE`, DRS_REGIAO = Regional, DRS_SETOR = Setor,
