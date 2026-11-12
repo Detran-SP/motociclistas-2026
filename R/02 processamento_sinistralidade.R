@@ -62,6 +62,39 @@ if (file.exists("data/mun_sistran.csv")) {
   }
 }
 
+# Atualização de contatos institucionais adicionais (PRF, DNIT, ANTT, SEMOB)
+if (file.exists("data/contatos_prf.csv")) {
+  tb_prf <- read.csv("data/contatos_prf.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
+    select(CD_MUN_7 = `Código IBGE`, PRF_DELEGACIA = Delegacia, PRF_RESPONSAVEL = `Nome completo`,
+           PRF_CARGO = Cargo, PRF_EMAIL = `E-mail`, PRF_TELEFONE = Telefone) |> 
+    mutate(CD_MUN_7 = as.integer(CD_MUN_7))
+  bd_municipios <- bd_municipios |> left_join(tb_prf, by = "CD_MUN_7")
+}
+
+if (file.exists("data/contatos_dnit.csv")) {
+  tb_dnit <- read.csv("data/contatos_dnit.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
+    select(CD_MUN_7 = `Código IBGE`, DNIT_REGIAO = `Região metropolitana`, DNIT_RESPONSAVEL = `Nome completo`,
+           DNIT_CARGO = Cargo, DNIT_EMAIL = `E-mail`, DNIT_TELEFONE = Telefone) |> 
+    mutate(CD_MUN_7 = as.integer(CD_MUN_7))
+  bd_municipios <- bd_municipios |> left_join(tb_dnit, by = "CD_MUN_7")
+}
+
+if (file.exists("data/contatos_antt.csv")) {
+  tb_antt <- read.csv("data/contatos_antt.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
+    select(CD_MUN_7 = `Código IBGE`, ANTT_RESPONSAVEL = `Nome completo`,
+           ANTT_CARGO = Cargo, ANTT_EMAIL = `E-mail`, ANTT_TELEFONE = Telefone) |> 
+    mutate(CD_MUN_7 = as.integer(CD_MUN_7))
+  bd_municipios <- bd_municipios |> left_join(tb_antt, by = "CD_MUN_7")
+}
+
+if (file.exists("data/contatos_guarulhos.csv")) {
+  tb_guar <- read.csv("data/contatos_guarulhos.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
+    select(CD_MUN_7 = `Código IBGE`, MUNICIPAL_INSTITUICAO = Instituição, MUNICIPAL_RESPONSAVEL = `Nome completo`,
+           MUNICIPAL_CARGO = Cargo, MUNICIPAL_EMAIL = `E-mail`, MUNICIPAL_TELEFONE = Telefone) |> 
+    mutate(CD_MUN_7 = as.integer(CD_MUN_7))
+  bd_municipios <- bd_municipios |> left_join(tb_guar, by = "CD_MUN_7")
+}
+
 # Arquivo geoespacial
 sf_municipios <- sf::st_read("input/SP_Municipios.gpkg") |> 
   mutate(CD_MUN_7 = as.integer(CD_MUN)) |> 

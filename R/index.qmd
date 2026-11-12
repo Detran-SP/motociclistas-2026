@@ -192,6 +192,128 @@ adesao_sistran_status <- if (!is.null(cods_sistran_csv)) {
   as.integer(norm(v("ADESAO_SISTRAN")) %in% "nao")
 }
 
+# ---- Contatos Adicionais (PRF, DNIT, ANTT, SEMOB) via data/*.csv ----
+ler_csv_path <- function(nome_arquivo) {
+  p1 <- file.path("../data", nome_arquivo)
+  p2 <- file.path("data", nome_arquivo)
+  if (file.exists(p1)) return(p1)
+  if (file.exists(p2)) return(p2)
+  return(NULL)
+}
+
+cods_prf <- character()
+contatos_prf_json <- "{}"
+p_prf <- ler_csv_path("contatos_prf.csv")
+if (!is.null(p_prf)) {
+  tryCatch({
+    df_prf <- read.csv(p_prf, stringsAsFactors = FALSE, check.names = FALSE)
+    cods_prf <- trimws(as.character(df_prf[[2]]))
+    lista_prf <- list()
+    for (i in seq_len(nrow(df_prf))) {
+      cod <- trimws(as.character(df_prf[[2]][i]))
+      nm <- trimws(stringi::stri_trans_general(df_prf[[3]][i], "Latin-ASCII"))
+      k_nome <- tolower(gsub("[^a-zA-Z0-9]+", "", nm))
+      item <- list(
+        delegacia = trimws(as.character(df_prf[[1]][i])),
+        ibge      = cod,
+        municipio = trimws(as.character(df_prf[[3]][i])),
+        nome      = trimws(as.character(df_prf[[4]][i])),
+        cargo     = trimws(as.character(df_prf[[5]][i])),
+        email     = trimws(as.character(df_prf[[6]][i])),
+        telefone  = trimws(as.character(df_prf[[7]][i]))
+      )
+      lista_prf[[cod]] <- item
+      lista_prf[[k_nome]] <- item
+    }
+    contatos_prf_json <- jsonlite::toJSON(lista_prf, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
+cods_dnit <- character()
+contatos_dnit_json <- "{}"
+p_dnit <- ler_csv_path("contatos_dnit.csv")
+if (!is.null(p_dnit)) {
+  tryCatch({
+    df_dnit <- read.csv(p_dnit, stringsAsFactors = FALSE, check.names = FALSE)
+    cods_dnit <- trimws(as.character(df_dnit[[2]]))
+    lista_dnit <- list()
+    for (i in seq_len(nrow(df_dnit))) {
+      cod <- trimws(as.character(df_dnit[[2]][i]))
+      nm <- trimws(stringi::stri_trans_general(df_dnit[[3]][i], "Latin-ASCII"))
+      k_nome <- tolower(gsub("[^a-zA-Z0-9]+", "", nm))
+      item <- list(
+        regiao    = trimws(as.character(df_dnit[[1]][i])),
+        ibge      = cod,
+        municipio = trimws(as.character(df_dnit[[3]][i])),
+        nome      = trimws(as.character(df_dnit[[4]][i])),
+        cargo     = trimws(as.character(df_dnit[[5]][i])),
+        email     = trimws(as.character(df_dnit[[6]][i])),
+        telefone  = trimws(as.character(df_dnit[[7]][i]))
+      )
+      lista_dnit[[cod]] <- item
+      lista_dnit[[k_nome]] <- item
+    }
+    contatos_dnit_json <- jsonlite::toJSON(lista_dnit, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
+cods_antt <- character()
+contatos_antt_json <- "{}"
+p_antt <- ler_csv_path("contatos_antt.csv")
+if (!is.null(p_antt)) {
+  tryCatch({
+    df_antt <- read.csv(p_antt, stringsAsFactors = FALSE, check.names = FALSE)
+    cods_antt <- trimws(as.character(df_antt[[1]]))
+    lista_antt <- list()
+    for (i in seq_len(nrow(df_antt))) {
+      cod <- trimws(as.character(df_antt[[1]][i]))
+      nm <- trimws(stringi::stri_trans_general(df_antt[[2]][i], "Latin-ASCII"))
+      k_nome <- tolower(gsub("[^a-zA-Z0-9]+", "", nm))
+      cargo_val <- trimws(as.character(df_antt[[4]][i]))
+      if (is.na(cargo_val) || !nzchar(cargo_val)) cargo_val <- "Ponto Focal ANTT"
+      item <- list(
+        ibge      = cod,
+        municipio = trimws(as.character(df_antt[[2]][i])),
+        nome      = trimws(as.character(df_antt[[3]][i])),
+        cargo     = cargo_val,
+        email     = trimws(as.character(df_antt[[5]][i])),
+        telefone  = trimws(as.character(df_antt[[6]][i]))
+      )
+      lista_antt[[cod]] <- item
+      lista_antt[[k_nome]] <- item
+    }
+    contatos_antt_json <- jsonlite::toJSON(lista_antt, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
+cods_guar <- character()
+contatos_municipal_json <- "{}"
+p_guar <- ler_csv_path("contatos_guarulhos.csv")
+if (!is.null(p_guar)) {
+  tryCatch({
+    df_guar <- read.csv(p_guar, stringsAsFactors = FALSE, check.names = FALSE)
+    cods_guar <- trimws(as.character(df_guar[[1]]))
+    lista_guar <- list()
+    for (i in seq_len(nrow(df_guar))) {
+      cod <- trimws(as.character(df_guar[[1]][i]))
+      nm <- trimws(stringi::stri_trans_general(df_guar[[2]][i], "Latin-ASCII"))
+      k_nome <- tolower(gsub("[^a-zA-Z0-9]+", "", nm))
+      item <- list(
+        ibge        = cod,
+        municipio   = trimws(as.character(df_guar[[2]][i])),
+        instituicao = trimws(as.character(df_guar[[3]][i])),
+        nome        = trimws(as.character(df_guar[[4]][i])),
+        cargo       = trimws(as.character(df_guar[[5]][i])),
+        email       = trimws(as.character(df_guar[[6]][i])),
+        telefone    = trimws(as.character(df_guar[[7]][i]))
+      )
+      lista_guar[[cod]] <- item
+      lista_guar[[k_nome]] <- item
+    }
+    contatos_municipal_json <- jsonlite::toJSON(lista_guar, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
 # ---- Contatos dos Superintendentes e Adjuntos via data/contatos_superintendentes.csv ----
 contatos_csv_path <- if (file.exists("../data/contatos_superintendentes.csv")) "../data/contatos_superintendentes.csv" else if (file.exists("data/contatos_superintendentes.csv")) "data/contatos_superintendentes.csv" else NULL
 contatos_super_json <- "{}"
@@ -207,14 +329,14 @@ if (!is.null(contatos_csv_path)) {
     
     lista_contatos <- list()
     for (i in seq_len(nrow(df_contatos))) {
-      raw_nome <- df_contatos[[1]][i]
-      nome_limpo <- sub("^[Ss]uperintend[eê]ncia\\s+em\\s+", "", raw_nome)
-      nome_limpo <- trimws(stringi::stri_trans_general(nome_limpo, "Latin-ASCII"))
-      chave <- tolower(gsub("[^a-zA-Z0-9]+", "", nome_limpo))
-      chave_espaco <- tolower(trimws(gsub("[^a-zA-Z0-9 ]+", "", nome_limpo)))
+      raw_val <- df_contatos[[1]][i]
+      raw_nome <- gsub("[\s\x{00a0}\xc2\xa0]+", " ", raw_val, perl = TRUE)
+      nome_limpo <- trimws(sub("^[Ss]uperintend[eê]ncia em ", "", raw_nome))
+      nome_ascii <- trimws(stringi::stri_trans_general(nome_limpo, "Latin-ASCII"))
+      chave <- tolower(gsub("[^a-zA-Z0-9]+", "", nome_ascii))
+      chave_espaco <- tolower(trimws(gsub("[^a-zA-Z0-9 ]+", "", nome_ascii)))
       
-      nome_display <- sub("^[Ss]uperintend[eê]ncia\\s+em\\s+", "", raw_nome)
-      nome_display <- trimws(nome_display)
+      nome_display <- nome_limpo
       
       item_contato <- list(
         superintendencia     = nome_display,
@@ -229,25 +351,34 @@ if (!is.null(contatos_csv_path)) {
       if (chave_espaco != chave) {
         lista_contatos[[chave_espaco]] <- item_contato
       }
+      lista_contatos[[paste0("superintendenciaem", chave)]] <- item_contato
+      lista_contatos[[paste0("superintendencia em ", chave_espaco)]] <- item_contato
     }
     contatos_super_json <- jsonlite::toJSON(lista_contatos, auto_unbox = TRUE)
   }, error = function(e) NULL)
 }
 
 # ---- Atributos usados no mapa ----
+col_ibge_mun <- acha_coluna(mun, c("^cd_mun_7$", "^cd_mun$", "^cod_ibge$", "ibge"), apenas_texto = FALSE, descricao = "código IBGE")
+
 mun_js <- st_sf(
   nome       = as.character(mun[[col_mun_nome]]),
+  ibge       = as.character(mun[[col_ibge_mun]]),
   super      = super_mun,
   # 1 = município SEM adesão ao SISTRAN (cinza escuro hachurado)
   sem_adesao = adesao_sistran_status,
   saude      = rotulo(v("DEPARTAMENTO_REGIONAL_SAUDE")),
   pm         = rotulo(v("COMANDO_POLICIA_MILITAR")),
   der        = rotulo(v("DIVISAO_REGIONAL_DER")),
-  # PRF: rodovia federal concedida OU não concedida
+  # PRF: rodovia federal concedida OU não concedida OU presente em contatos_prf
   prf        = as.integer(norm(v("RODOVIA_FEDERAL_NAO_CONCEDIDA")) %in% "sim" |
-                          norm(v("RODOVIA_FEDERAL_CONCEDIDA")) %in% "sim"),
-  # ANTT: rodovia federal concedida
-  antt       = as.integer(norm(v("RODOVIA_FEDERAL_CONCEDIDA")) %in% "sim"),
+                          norm(v("RODOVIA_FEDERAL_CONCEDIDA")) %in% "sim" |
+                          as.character(mun[[col_ibge_mun]]) %in% cods_prf),
+  # DNIT: presente em contatos_dnit
+  dnit       = as.integer(as.character(mun[[col_ibge_mun]]) %in% cods_dnit),
+  # ANTT: rodovia federal concedida OU presente em contatos_antt
+  antt       = as.integer(norm(v("RODOVIA_FEDERAL_CONCEDIDA")) %in% "sim" |
+                          as.character(mun[[col_ibge_mun]]) %in% cods_antt),
   # Artesp: rodovia estadual concedida
   artesp     = as.integer(norm(v("RODOVIA_ESTADUAL_CONCEDIDA")) %in% "sim"),
   acoes      = rotulo(v("ACOES_FISCALIZACAO")),
@@ -307,20 +438,131 @@ function(el, x, data) {
     "sorocaba": { "superintendencia": "Sorocaba", "superintendente_nome": "RICARDO MENDES PEREIRA MUELLER", "superintendente_email": "ricardo.mueller@detran.sp.gov.br", "superintendente_tel": "(15) 98815-3001", "adjunto_nome": "Alexandre Albuquerque Diniz Kamibeppu", "adjunto_email": "alexandre.kamibeppu@detran.sp.gov.br", "adjunto_tel": "15991377345 / 11966261853" }
   };
 
+  function normKeySuper(s) {
+    if (!s) return '';
+    return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+      .replace(/[ \s]+/g, ' ')
+      .replace(/^superintend[eê]ncia\s*(em)?\s*/i, '')
+      .replace(/^superintendencia(em)?/i, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function limparNomeSuper(nome) {
+    if (!nome) return '';
+    return String(nome)
+      .replace(/[ \s]+/g, ' ')
+      .replace(/^[Ss]uperintend[eê]ncia\s*(em)?\s*/i, '')
+      .trim();
+  }
+
   var CONTATOS_SUPER = (data && data.contatos) ? (typeof data.contatos === 'string' ? JSON.parse(data.contatos) : data.contatos) : null;
   if (!CONTATOS_SUPER || Object.keys(CONTATOS_SUPER).length === 0) {
     CONTATOS_SUPER = DIC_CONTATOS_PADRAO;
+  }
+  if (CONTATOS_SUPER) {
+    Object.keys(CONTATOS_SUPER).forEach(function(k) {
+      var ck = normKeySuper(k);
+      if (ck && !CONTATOS_SUPER[ck]) {
+        CONTATOS_SUPER[ck] = CONTATOS_SUPER[k];
+      }
+      if (ck && !CONTATOS_SUPER['superintendenciaem' + ck]) {
+        CONTATOS_SUPER['superintendenciaem' + ck] = CONTATOS_SUPER[k];
+      }
+    });
   }
   window.contatosSuperintendentes = CONTATOS_SUPER;
 
   function getContatoSuper(nome) {
     if (!nome) return null;
-    var dict = window.contatosSuperintendentes || DIC_CONTATOS_PADRAO;
+    var dict = window.contatosSuperintendentes || (typeof DIC_CONTATOS_PADRAO !== 'undefined' ? DIC_CONTATOS_PADRAO : null);
     if (!dict) return null;
-    var k1 = norm(nome);
-    var k2 = k1.replace(/[^a-z0-9]/g, '');
-    return dict[k1] || dict[k2] || null;
+    var kClean = normKeySuper(nome);
+    var kRaw1 = norm(nome);
+    var kRaw2 = kRaw1.replace(/[^a-z0-9]/g, '');
+    var res = dict[kClean] || dict[kRaw1] || dict[kRaw2] ||
+              dict['superintendenciaem' + kClean] || dict['superintendencia em ' + kClean];
+    if (res) return res;
+    if (typeof DIC_CONTATOS_PADRAO !== 'undefined' && DIC_CONTATOS_PADRAO) {
+      return DIC_CONTATOS_PADRAO[kClean] || DIC_CONTATOS_PADRAO[kRaw1] || DIC_CONTATOS_PADRAO[kRaw2] ||
+             DIC_CONTATOS_PADRAO['superintendenciaem' + kClean] || null;
+    }
+    return null;
   }
+  window.getContatoSuper = getContatoSuper;
+  window.limparNomeSuper = limparNomeSuper;
+
+  var DIC_CONTATOS_PRF_PADRAO = {"3518800": {"delegacia": "Del 01 - Guarulhos", "ibge": "3518800", "municipio": "Guarulhos", "nome": "Marcelo Vantini dos Santos", "cargo": "Chefe de Delegacia", "email": "marcelo.vantini@prf.gov.br", "telefone": "(11) 97127-9681"}, "guarulhos": {"delegacia": "Del 01 - Guarulhos", "ibge": "3518800", "municipio": "Guarulhos", "nome": "Marcelo Vantini dos Santos", "cargo": "Chefe de Delegacia", "email": "marcelo.vantini@prf.gov.br", "telefone": "(11) 97127-9681"}, "3549904": {"delegacia": "Del 02 - São José dos Campos", "ibge": "3549904", "municipio": "São José dos Campos", "nome": "Cleverson Luiz Calzado Gomes", "cargo": "Chefe de Delegacia", "email": "cleverson.calzado@prf.gov.br", "telefone": "(11) 97517-8524"}, "saojosedoscampos": {"delegacia": "Del 02 - São José dos Campos", "ibge": "3549904", "municipio": "São José dos Campos", "nome": "Cleverson Luiz Calzado Gomes", "cargo": "Chefe de Delegacia", "email": "cleverson.calzado@prf.gov.br", "telefone": "(11) 97517-8524"}, "3504107": {"delegacia": "Del 03 - Atibaia", "ibge": "3504107", "municipio": "Atibaia", "nome": "Flavio Silva de Oliveira", "cargo": "Chefe de Delegacia", "email": "flavio.silva@prf.gov.br", "telefone": "(11) 99937-0639"}, "atibaia": {"delegacia": "Del 03 - Atibaia", "ibge": "3504107", "municipio": "Atibaia", "nome": "Flavio Silva de Oliveira", "cargo": "Chefe de Delegacia", "email": "flavio.silva@prf.gov.br", "telefone": "(11) 99937-0639"}, "3522208": {"delegacia": "Del 04 - Itapecerica da Serra", "ibge": "3522208", "municipio": "Itapecerica da Serra", "nome": "Gilson Alexandre dos Santos", "cargo": "Chefe de Delegacia", "email": "gilson.alexandre@prf.gov.br", "telefone": "(11) 99604-7342"}, "itapecericadaserra": {"delegacia": "Del 04 - Itapecerica da Serra", "ibge": "3522208", "municipio": "Itapecerica da Serra", "nome": "Gilson Alexandre dos Santos", "cargo": "Chefe de Delegacia", "email": "gilson.alexandre@prf.gov.br", "telefone": "(11) 99604-7342"}, "3542602": {"delegacia": "Del 05 - Registro", "ibge": "3542602", "municipio": "Registro", "nome": "Jackson Evandro Prado Costa", "cargo": "Chefe de Delegacia", "email": "jackson.evandro@prf.gov.br", "telefone": "(11) 97239-6819"}, "registro": {"delegacia": "Del 05 - Registro", "ibge": "3542602", "municipio": "Registro", "nome": "Jackson Evandro Prado Costa", "cargo": "Chefe de Delegacia", "email": "jackson.evandro@prf.gov.br", "telefone": "(11) 97239-6819"}, "3555406": {"delegacia": "Del 06 - Ubatuba", "ibge": "3555406", "municipio": "Ubatuba", "nome": "Sergio Heleno Azevedo de Amorim", "cargo": "Chefe de Delegacia", "email": "sergio.amorim@prf.gov.br", "telefone": "(12) 99185-0702"}, "ubatuba": {"delegacia": "Del 06 - Ubatuba", "ibge": "3555406", "municipio": "Ubatuba", "nome": "Sergio Heleno Azevedo de Amorim", "cargo": "Chefe de Delegacia", "email": "sergio.amorim@prf.gov.br", "telefone": "(12) 99185-0702"}, "3529005": {"delegacia": "Del 07 - Marília", "ibge": "3529005", "municipio": "Marília", "nome": "William Gonçalves Buim", "cargo": "Chefe de Delegacia", "email": "william.buim@prf.gov.br", "telefone": "(14) 98188-1111"}, "marilia": {"delegacia": "Del 07 - Marília", "ibge": "3529005", "municipio": "Marília", "nome": "William Gonçalves Buim", "cargo": "Chefe de Delegacia", "email": "william.buim@prf.gov.br", "telefone": "(14) 98188-1111"}, "3544301": {"delegacia": "Del 08 - Roseira", "ibge": "3544301", "municipio": "Roseira", "nome": "Leonardo Rosa Carneiro", "cargo": "Chefe de Delegacia", "email": "leonardo.carneiro@prf.gov.br", "telefone": "(12) 99687-2003"}, "roseira": {"delegacia": "Del 08 - Roseira", "ibge": "3544301", "municipio": "Roseira", "nome": "Leonardo Rosa Carneiro", "cargo": "Chefe de Delegacia", "email": "leonardo.carneiro@prf.gov.br", "telefone": "(12) 99687-2003"}, "3549805": {"delegacia": "Del 09 - São José do Rio Preto", "ibge": "3549805", "municipio": "São José do Rio Preto", "nome": "Elbio Gonçalves", "cargo": "Chefe de Delegacia", "email": "elbio.goncalves@prf.gov.br", "telefone": "(17) 99238-3913"}, "saojosedoriopreto": {"delegacia": "Del 09 - São José do Rio Preto", "ibge": "3549805", "municipio": "São José do Rio Preto", "nome": "Elbio Gonçalves", "cargo": "Chefe de Delegacia", "email": "elbio.goncalves@prf.gov.br", "telefone": "(17) 99238-3913"}};
+  var DIC_CONTATOS_DNIT_PADRAO = {"3503901": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3503901", "municipio": "Arujá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "aruja": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3503901", "municipio": "Arujá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3505708": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3505708", "municipio": "Barueri", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "barueri": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3505708", "municipio": "Barueri", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3506607": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3506607", "municipio": "Biritiba Mirim", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "biritibamirim": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3506607", "municipio": "Biritiba Mirim", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3509007": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3509007", "municipio": "Caieiras", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "caieiras": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3509007", "municipio": "Caieiras", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3509205": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3509205", "municipio": "Cajamar", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cajamar": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3509205", "municipio": "Cajamar", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3510609": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3510609", "municipio": "Carapicuíba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "carapicuiba": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3510609", "municipio": "Carapicuíba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3513009": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3513009", "municipio": "Cotia", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cotia": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3513009", "municipio": "Cotia", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3513801": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3513801", "municipio": "Diadema", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "diadema": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3513801", "municipio": "Diadema", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3515004": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3515004", "municipio": "Embu das Artes", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "embudasartes": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3515004", "municipio": "Embu das Artes", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3515103": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3515103", "municipio": "Embu-Guaçu", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "embuguacu": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3515103", "municipio": "Embu-Guaçu", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3515707": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3515707", "municipio": "Ferraz de Vasconcelos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "ferrazdevasconcelos": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3515707", "municipio": "Ferraz de Vasconcelos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3516309": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3516309", "municipio": "Francisco Morato", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "franciscomorato": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3516309", "municipio": "Francisco Morato", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3516408": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3516408", "municipio": "Franco da Rocha", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "francodarocha": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3516408", "municipio": "Franco da Rocha", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3518305": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3518305", "municipio": "Guararema", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "guararema": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3518305", "municipio": "Guararema", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3518800": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3518800", "municipio": "Guarulhos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "guarulhos": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3518800", "municipio": "Guarulhos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3522208": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3522208", "municipio": "Itapecerica da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "itapecericadaserra": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3522208", "municipio": "Itapecerica da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3522505": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3522505", "municipio": "Itapevi", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "itapevi": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3522505", "municipio": "Itapevi", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3523107": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3523107", "municipio": "Itaquaquecetuba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "itaquaquecetuba": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3523107", "municipio": "Itaquaquecetuba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3525003": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3525003", "municipio": "Jandira", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "jandira": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3525003", "municipio": "Jandira", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3526209": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3526209", "municipio": "Juquitiba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "juquitiba": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3526209", "municipio": "Juquitiba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3528502": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3528502", "municipio": "Mairiporã", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "mairipora": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3528502", "municipio": "Mairiporã", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3529401": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3529401", "municipio": "Mauá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "maua": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3529401", "municipio": "Mauá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3530607": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3530607", "municipio": "Mogi das Cruzes", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "mogidascruzes": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3530607", "municipio": "Mogi das Cruzes", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3534401": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3534401", "municipio": "Osasco", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "osasco": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3534401", "municipio": "Osasco", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3539103": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3539103", "municipio": "Pirapora do Bom Jesus", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "piraporadobomjesus": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3539103", "municipio": "Pirapora do Bom Jesus", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3539806": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3539806", "municipio": "Poá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "poa": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3539806", "municipio": "Poá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3543303": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3543303", "municipio": "Ribeirão Pires", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "ribeiraopires": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3543303", "municipio": "Ribeirão Pires", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3544103": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3544103", "municipio": "Rio Grande da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "riograndedaserra": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3544103", "municipio": "Rio Grande da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3545001": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3545001", "municipio": "Salesópolis", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "salesopolis": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3545001", "municipio": "Salesópolis", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3546801": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3546801", "municipio": "Santa Isabel", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "santaisabel": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3546801", "municipio": "Santa Isabel", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3547304": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3547304", "municipio": "Santana de Parnaíba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "santanadeparnaiba": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3547304", "municipio": "Santana de Parnaíba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3547809": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3547809", "municipio": "Santo André", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "santoandre": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3547809", "municipio": "Santo André", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3548708": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3548708", "municipio": "São Bernardo do Campo", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saobernardodocampo": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3548708", "municipio": "São Bernardo do Campo", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3548807": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3548807", "municipio": "São Caetano do Sul", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saocaetanodosul": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3548807", "municipio": "São Caetano do Sul", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3549953": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3549953", "municipio": "São Lourenço da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saolourencodaserra": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3549953", "municipio": "São Lourenço da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3550308": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3550308", "municipio": "São Paulo", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saopaulo": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3550308", "municipio": "São Paulo", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3552502": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3552502", "municipio": "Suzano", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "suzano": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3552502", "municipio": "Suzano", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3552809": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3552809", "municipio": "Taboão da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "taboaodaserra": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3552809", "municipio": "Taboão da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3556453": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3556453", "municipio": "Vargem Grande Paulista", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "vargemgrandepaulista": {"regiao": "Região Metropolitana de São Paulo", "ibge": "3556453", "municipio": "Vargem Grande Paulista", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3506359": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3506359", "municipio": "Bertioga", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "bertioga": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3506359", "municipio": "Bertioga", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3513504": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3513504", "municipio": "Cubatão", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cubatao": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3513504", "municipio": "Cubatão", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3518701": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3518701", "municipio": "Guarujá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "guaruja": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3518701", "municipio": "Guarujá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3522109": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3522109", "municipio": "Itanhaém", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "itanhaem": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3522109", "municipio": "Itanhaém", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3531100": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3531100", "municipio": "Mongaguá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "mongagua": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3531100", "municipio": "Mongaguá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3537602": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3537602", "municipio": "Peruíbe", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "peruibe": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3537602", "municipio": "Peruíbe", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3541000": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3541000", "municipio": "Praia Grande", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "praiagrande": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3541000", "municipio": "Praia Grande", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3548500": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3548500", "municipio": "Santos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "santos": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3548500", "municipio": "Santos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3551009": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3551009", "municipio": "São Vicente", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saovicente": {"regiao": "Região Metropolitana da Baixada Santista", "ibge": "3551009", "municipio": "São Vicente", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3502507": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3502507", "municipio": "Aparecida", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "aparecida": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3502507", "municipio": "Aparecida", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3503158": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3503158", "municipio": "Arapeí", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "arapei": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3503158", "municipio": "Arapeí", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3503505": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3503505", "municipio": "Areias", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "areias": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3503505", "municipio": "Areias", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3504909": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3504909", "municipio": "Bananal", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "bananal": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3504909", "municipio": "Bananal", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3508504": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3508504", "municipio": "Caçapava", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cacapava": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3508504", "municipio": "Caçapava", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3508603": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3508603", "municipio": "Cachoeira Paulista", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cachoeirapaulista": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3508603", "municipio": "Cachoeira Paulista", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3509700": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3509700", "municipio": "Campos do Jordão", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "camposdojordao": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3509700", "municipio": "Campos do Jordão", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3509957": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3509957", "municipio": "Canas", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "canas": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3509957", "municipio": "Canas", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3510500": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3510500", "municipio": "Caraguatatuba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "caraguatatuba": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3510500", "municipio": "Caraguatatuba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3513405": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3513405", "municipio": "Cruzeiro", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cruzeiro": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3513405", "municipio": "Cruzeiro", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3513603": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3513603", "municipio": "Cunha", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "cunha": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3513603", "municipio": "Cunha", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3518404": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3518404", "municipio": "Guaratinguetá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "guaratingueta": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3518404", "municipio": "Guaratinguetá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3520202": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3520202", "municipio": "Igaratá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "igarata": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3520202", "municipio": "Igaratá", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3520400": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3520400", "municipio": "Ilhabela", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "ilhabela": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3520400", "municipio": "Ilhabela", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3524402": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3524402", "municipio": "Jacareí", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "jacarei": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3524402", "municipio": "Jacareí", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3524907": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3524907", "municipio": "Jambeiro", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "jambeiro": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3524907", "municipio": "Jambeiro", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3526308": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3526308", "municipio": "Lagoinha", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "lagoinha": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3526308", "municipio": "Lagoinha", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3526605": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3526605", "municipio": "Lavrinhas", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "lavrinhas": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3526605", "municipio": "Lavrinhas", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3527207": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3527207", "municipio": "Lorena", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "lorena": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3527207", "municipio": "Lorena", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3531704": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3531704", "municipio": "Monteiro Lobato", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "monteirolobato": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3531704", "municipio": "Monteiro Lobato", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3532306": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3532306", "municipio": "Natividade da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "natividadedaserra": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3532306", "municipio": "Natividade da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3535606": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3535606", "municipio": "Paraibuna", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "paraibuna": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3535606", "municipio": "Paraibuna", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3538006": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3538006", "municipio": "Pindamonhangaba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "pindamonhangaba": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3538006", "municipio": "Pindamonhangaba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3538501": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3538501", "municipio": "Piquete", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "piquete": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3538501", "municipio": "Piquete", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3540754": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3540754", "municipio": "Potim", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "potim": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3540754", "municipio": "Potim", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3541901": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3541901", "municipio": "Queluz", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "queluz": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3541901", "municipio": "Queluz", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3542305": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3542305", "municipio": "Redenção da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "redencaodaserra": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3542305", "municipio": "Redenção da Serra", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3544301": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3544301", "municipio": "Roseira", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "roseira": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3544301", "municipio": "Roseira", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3546009": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3546009", "municipio": "Santa Branca", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "santabranca": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3546009", "municipio": "Santa Branca", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3548203": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3548203", "municipio": "Santo Antônio do Pinhal", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "santoantoniodopinhal": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3548203", "municipio": "Santo Antônio do Pinhal", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3548609": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3548609", "municipio": "São Bento do Sapucaí", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saobentodosapucai": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3548609", "municipio": "São Bento do Sapucaí", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3549607": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3549607", "municipio": "São José do Barreiro", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saojosedobarreiro": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3549607", "municipio": "São José do Barreiro", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3549904": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3549904", "municipio": "São José dos Campos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saojosedoscampos": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3549904", "municipio": "São José dos Campos", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3550001": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3550001", "municipio": "São Luiz do Paraitinga", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saoluizdoparaitinga": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3550001", "municipio": "São Luiz do Paraitinga", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3550704": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3550704", "municipio": "São Sebastião", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "saosebastiao": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3550704", "municipio": "São Sebastião", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3552007": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3552007", "municipio": "Silveiras", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "silveiras": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3552007", "municipio": "Silveiras", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3554102": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3554102", "municipio": "Taubaté", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "taubate": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3554102", "municipio": "Taubaté", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3554805": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3554805", "municipio": "Tremembé", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "tremembe": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3554805", "municipio": "Tremembé", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "3555406": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3555406", "municipio": "Ubatuba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}, "ubatuba": {"regiao": "Região Metropolitana do Vale do Paraíba e Litoral Norte", "ibge": "3555406", "municipio": "Ubatuba", "nome": "Vladimir Navarro", "cargo": "Serviço de Operações Terrestres", "email": "vladimir.navarro@dnit.gov.br", "telefone": "(11) 99345-1661"}};
+  var DIC_CONTATOS_ANTT_PADRAO = {"3550308": {"ibge": "3550308", "municipio": "São Paulo", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "saopaulo": {"ibge": "3550308", "municipio": "São Paulo", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "3549904": {"ibge": "3549904", "municipio": "São José dos Campos", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "saojosedoscampos": {"ibge": "3549904", "municipio": "São José dos Campos", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "3543402": {"ibge": "3543402", "municipio": "Ribeirão Preto", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "ribeiraopreto": {"ibge": "3543402", "municipio": "Ribeirão Preto", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "3549805": {"ibge": "3549805", "municipio": "São José do Rio Preto", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}, "saojosedoriopreto": {"ibge": "3549805", "municipio": "São José do Rio Preto", "nome": "Cleber Rodrigues Fernandes", "cargo": "Ponto Focal ANTT", "email": "cleber.fernandes@antt.gov.br", "telefone": "(12) 99119-0027"}};
+  var DIC_CONTATOS_MUNICIPAL_PADRAO = {"3518800": {"ibge": "3518800", "municipio": "Guarulhos", "instituicao": "Secretaria de Mobilidade Urbana de Guarulhos - SEMOB", "nome": "Layla Fordelone Carmo da Silva", "cargo": "Seção Técnica", "email": "laylafordelone@guarulhos.sp.gov.br", "telefone": "(11) 98153-0065"}, "guarulhos": {"ibge": "3518800", "municipio": "Guarulhos", "instituicao": "Secretaria de Mobilidade Urbana de Guarulhos - SEMOB", "nome": "Layla Fordelone Carmo da Silva", "cargo": "Seção Técnica", "email": "laylafordelone@guarulhos.sp.gov.br", "telefone": "(11) 98153-0065"}};
+
+  var CONTATOS_PRF = (data && data.contatos_prf) ? (typeof data.contatos_prf === 'string' ? JSON.parse(data.contatos_prf) : data.contatos_prf) : null;
+  if (!CONTATOS_PRF || Object.keys(CONTATOS_PRF).length === 0) {
+    CONTATOS_PRF = DIC_CONTATOS_PRF_PADRAO;
+  }
+  window.contatosPrf = CONTATOS_PRF;
+
+  window.getContatoPrf = function(ibge, nome) {
+    var dict = window.contatosPrf || DIC_CONTATOS_PRF_PADRAO;
+    if (!dict) return null;
+    if (ibge && dict[String(ibge).trim()]) return dict[String(ibge).trim()];
+    if (nome) {
+      var k1 = norm(nome), k2 = k1.replace(/[^a-z0-9]/g, '');
+      return dict[k1] || dict[k2] || null;
+    }
+    return null;
+  };
+
+  var CONTATOS_DNIT = (data && data.contatos_dnit) ? (typeof data.contatos_dnit === 'string' ? JSON.parse(data.contatos_dnit) : data.contatos_dnit) : null;
+  if (!CONTATOS_DNIT || Object.keys(CONTATOS_DNIT).length === 0) {
+    CONTATOS_DNIT = DIC_CONTATOS_DNIT_PADRAO;
+  }
+  window.contatosDnit = CONTATOS_DNIT;
+
+  window.getContatoDnit = function(ibge, nome) {
+    var dict = window.contatosDnit || DIC_CONTATOS_DNIT_PADRAO;
+    if (!dict) return null;
+    if (ibge && dict[String(ibge).trim()]) return dict[String(ibge).trim()];
+    if (nome) {
+      var k1 = norm(nome), k2 = k1.replace(/[^a-z0-9]/g, '');
+      return dict[k1] || dict[k2] || null;
+    }
+    return null;
+  };
+
+  var CONTATOS_ANTT = (data && data.contatos_antt) ? (typeof data.contatos_antt === 'string' ? JSON.parse(data.contatos_antt) : data.contatos_antt) : null;
+  if (!CONTATOS_ANTT || Object.keys(CONTATOS_ANTT).length === 0) {
+    CONTATOS_ANTT = DIC_CONTATOS_ANTT_PADRAO;
+  }
+  window.contatosAntt = CONTATOS_ANTT;
+
+  window.getContatoAntt = function(ibge, nome) {
+    var dict = window.contatosAntt || DIC_CONTATOS_ANTT_PADRAO;
+    if (!dict) return null;
+    if (ibge && dict[String(ibge).trim()]) return dict[String(ibge).trim()];
+    if (nome) {
+      var k1 = norm(nome), k2 = k1.replace(/[^a-z0-9]/g, '');
+      return dict[k1] || dict[k2] || null;
+    }
+    return null;
+  };
+
+  var CONTATOS_MUNICIPAL = (data && data.contatos_municipal) ? (typeof data.contatos_municipal === 'string' ? JSON.parse(data.contatos_municipal) : data.contatos_municipal) : null;
+  if (!CONTATOS_MUNICIPAL || Object.keys(CONTATOS_MUNICIPAL).length === 0) {
+    CONTATOS_MUNICIPAL = DIC_CONTATOS_MUNICIPAL_PADRAO;
+  }
+  window.contatosMunicipal = CONTATOS_MUNICIPAL;
+
+  window.getContatoMunicipal = function(ibge, nome) {
+    var dict = window.contatosMunicipal || DIC_CONTATOS_MUNICIPAL_PADRAO;
+    if (!dict) return null;
+    if (ibge && dict[String(ibge).trim()]) return dict[String(ibge).trim()];
+    if (nome) {
+      var k1 = norm(nome), k2 = k1.replace(/[^a-z0-9]/g, '');
+      return dict[k1] || dict[k2] || null;
+    }
+    return null;
+  };
 
   window.leafletMap = map;
   window.geojsonSuper = SUPER;
@@ -386,9 +628,11 @@ function(el, x, data) {
     {grupo:'Gestão Rodoviária', id:'artesp', nome:'Artesp',     campo:'artesp', titulo:'Rodovia estadual concedida (Artesp)',
      bool:true, cor:'#e52c35', rot:ROT_SIMNAO, desc:'Rodovia estadual concedida'},
     {grupo:'Gestão Rodoviária', id:'antt',   nome:'ANTT',       campo:'antt',   titulo:'Rodovia federal concedida (ANTT)',
-     bool:true, cor:'#B456E0', rot:ROT_SIMNAO, desc:'Rodovia federal concedida'},
-    {grupo:'Gestão Rodoviária', id:'prf',    nome:'PRF e DNIT', campo:'prf',    titulo:'Rodovia federal (PRF e DNIT)',
-     bool:true, cor:'#B456E0', rot:ROT_SIMNAO, desc:'Rodovia federal concedida ou não concedida'},
+     bool:true, cor:'#7c3aed', rot:ROT_SIMNAO, desc:'Rodovia federal concedida (ANTT)'},
+    {grupo:'Gestão Rodoviária', id:'prf',    nome:'PRF',        campo:'prf',    titulo:'Polícia Rodoviária Federal (PRF)',
+     bool:true, cor:'#1e40af', rot:ROT_SIMNAO, desc:'Rodovia federal sob jurisdição da PRF'},
+    {grupo:'Gestão Rodoviária', id:'dnit',   nome:'DNIT',       campo:'dnit',   titulo:'Departamento Nacional de Infraestrutura de Transportes (DNIT)',
+     bool:true, cor:'#0f766e', rot:ROT_SIMNAO, desc:'Município com atuação/jurisdição do DNIT'},
     // ---- Sinistralidade (graduadas: 4 classes por superintendência, quebras naturais de Jenks) ----
     {grupo:'Sinistralidade', id:'pobt', nome:'Proporção de óbitos de motociclistas', campo:'prop_obitos', grad:true,
      titulo:'Proporção de óbitos de motociclistas',
@@ -1097,8 +1341,9 @@ function(el, x, data) {
 
     var rodoviasTags = '';
     if (+p.artesp === 1) rodoviasTags += '<span class="mdn-tag-rodovia artesp" title="Rodovia estadual concedida">ARTESP</span>';
-    if (+p.antt === 1)   rodoviasTags += '<span class="mdn-tag-rodovia" title="Rodovia federal concedida">ANTT</span>';
-    if (+p.prf === 1)    rodoviasTags += '<span class="mdn-tag-rodovia" title="Rodovia federal (PRF/DNIT)">PRF</span>';
+    if (+p.antt === 1)   rodoviasTags += '<span class="mdn-tag-rodovia antt" title="Rodovia federal concedida (ANTT)">ANTT</span>';
+    if (+p.prf === 1)    rodoviasTags += '<span class="mdn-tag-rodovia prf" title="Rodovia federal (PRF)">PRF</span>';
+    if (+p.dnit === 1)   rodoviasTags += '<span class="mdn-tag-rodovia dnit" title="Jurisdição Regional DNIT">DNIT</span>';
 
     var derVal = p.der ? esc(p.der) + (p.pf_der ? ' <span class="pf">(' + esc(p.pf_der) + ')</span>' : '') : '—';
     var saudeVal = p.saude ? esc(p.saude) + (p.pf_drs ? ' <span class="pf">(' + esc(p.pf_drs) + ')</span>' : '') : '—';
@@ -1107,7 +1352,7 @@ function(el, x, data) {
 
     // Responsáveis pela Superintendência DETRAN-SP
     var cSuper = getContatoSuper(p.super);
-    var superTitulo = (cSuper && cSuper.superintendencia) ? cSuper.superintendencia : (p.super || 'Não informada');
+    var superTitulo = limparNomeSuper((cSuper && cSuper.superintendencia) ? cSuper.superintendencia : (p.super || 'Não informada'));
     var supNome = cSuper ? cSuper.superintendente_nome : '';
     var supTel = cSuper ? cSuper.superintendente_tel : '';
     var supEmail = cSuper ? cSuper.superintendente_email : '';
@@ -1916,8 +2161,9 @@ function(el, x, data) {
       if (p.saude) orgaosHtml += '<span class="mdn-tag-orgao" title="' + esc(p.pf_drs ? 'Ponto focal: ' + p.pf_drs : 'Ponto focal DRS') + '">SES: ' + esc(p.saude.replace(/^DRS\s+[IVXLCDM]+\s*-\s*/, '')) + '</span>';
       if (p.pm)    orgaosHtml += '<span class="mdn-tag-orgao" title="' + esc(p.pf_pm ? 'Ponto focal: ' + p.pf_pm : 'Ponto focal PM') + '">PM: ' + esc(p.pm.replace(/^CPI-\d+\s*/, '')) + '</span>';
       if (+p.artesp === 1) orgaosHtml += '<span class="mdn-tag-rodovia artesp" title="Rodovia estadual concedida">ARTESP</span>';
-      if (+p.antt === 1)   orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia federal concedida">ANTT</span>';
-      if (+p.prf === 1)    orgaosHtml += '<span class="mdn-tag-rodovia" title="Rodovia federal (PRF/DNIT)">PRF</span>';
+      if (+p.antt === 1)   orgaosHtml += '<span class="mdn-tag-rodovia antt" title="Rodovia federal concedida (ANTT)">ANTT</span>';
+      if (+p.prf === 1)    orgaosHtml += '<span class="mdn-tag-rodovia prf" title="Rodovia federal (PRF)">PRF</span>';
+      if (+p.dnit === 1)   orgaosHtml += '<span class="mdn-tag-rodovia dnit" title="Jurisdição Regional DNIT">DNIT</span>';
 
       var isSel = (munSelecionadoCard === p.nome);
 
@@ -2012,9 +2258,13 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
   addProviderTiles("Esri.WorldGrayCanvas") |>
   fitBounds(lng1 = bb[["xmin"]], lat1 = bb[["ymin"]],
             lng2 = bb[["xmax"]], lat2 = bb[["ymax"]]) |>
-  onRender(js, data = list(super    = para_geojson(super_js),
-                           mun      = para_geojson(mun_js),
-                           contatos = contatos_super_json))
+  onRender(js, data = list(super              = para_geojson(super_js),
+                           mun                = para_geojson(mun_js),
+                           contatos           = contatos_super_json,
+                           contatos_prf       = contatos_prf_json,
+                           contatos_dnit      = contatos_dnit_json,
+                           contatos_antt      = contatos_antt_json,
+                           contatos_municipal = contatos_municipal_json))
 ```
 
 # Tabela de Dados {icon="table"}
@@ -2129,8 +2379,8 @@ cat(r"---(
       <div class="tb-filters-wrapper">
         <div class="tb-filters-grid">
           <div class="tb-field">
-            <label class="tb-label" for="filtro-busca">Pesquisar Município ou Regional</label>
-            <input type="text" id="filtro-busca" class="tb-input" placeholder="Digite para buscar...">
+            <label class="tb-label" for="filtro-busca">Pesquisar Município</label>
+            <input type="text" id="filtro-busca" class="tb-input" placeholder="Digite o nome do município ou código IBGE..." autocomplete="off" oninput="window.aplicarFiltros ? window.aplicarFiltros() : null">
           </div>
           <div class="tb-field">
             <label class="tb-label" for="filtro-super">Superintendência</label>
@@ -2341,17 +2591,53 @@ cat(r"---(
     "sao paulo": { "superintendencia": "São Paulo", "superintendente_nome": "EDUARDO CHAVES DA SILVA GOMES", "superintendente_email": "eduardo.gomes@detran.sp.gov.br", "superintendente_tel": "(12) 99740-1196", "adjunto_nome": "Alexandra Rocha da Silva", "adjunto_email": "alexandra.silva@detran.sp.gov.br", "adjunto_tel": "(17) 98808-9307" },
     "sorocaba": { "superintendencia": "Sorocaba", "superintendente_nome": "RICARDO MENDES PEREIRA MUELLER", "superintendente_email": "ricardo.mueller@detran.sp.gov.br", "superintendente_tel": "(15) 98815-3001", "adjunto_nome": "Alexandre Albuquerque Diniz Kamibeppu", "adjunto_email": "alexandre.kamibeppu@detran.sp.gov.br", "adjunto_tel": "15991377345 / 11966261853" }
   };
+  function normKeySuper(s) {
+    if (!s) return '';
+    return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+      .replace(/[ \s]+/g, ' ')
+      .replace(/^superintend[eê]ncia\s*(em)?\s*/i, '')
+      .replace(/^superintendencia(em)?/i, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function limparNomeSuper(nome) {
+    if (!nome) return '';
+    return String(nome)
+      .replace(/[ \s]+/g, ' ')
+      .replace(/^[Ss]uperintend[eê]ncia\s*(em)?\s*/i, '')
+      .trim();
+  }
+
   if (!window.contatosSuperintendentes || Object.keys(window.contatosSuperintendentes).length === 0) {
     window.contatosSuperintendentes = DIC_CONTATOS_PADRAO;
+  }
+  if (window.contatosSuperintendentes) {
+    Object.keys(window.contatosSuperintendentes).forEach(function(k) {
+      var ck = normKeySuper(k);
+      if (ck && !window.contatosSuperintendentes[ck]) {
+        window.contatosSuperintendentes[ck] = window.contatosSuperintendentes[k];
+      }
+      if (ck && !window.contatosSuperintendentes['superintendenciaem' + ck]) {
+        window.contatosSuperintendentes['superintendenciaem' + ck] = window.contatosSuperintendentes[k];
+      }
+    });
   }
 
   function getContatoSuper(nome) {
     if (!nome) return null;
-    var dict = window.contatosSuperintendentes || DIC_CONTATOS_PADRAO;
+    var dict = window.contatosSuperintendentes || (typeof DIC_CONTATOS_PADRAO !== 'undefined' ? DIC_CONTATOS_PADRAO : null);
     if (!dict) return null;
-    var k1 = norm(nome);
-    var k2 = k1.replace(/[^a-z0-9]/g, '');
-    return dict[k1] || dict[k2] || null;
+    var kClean = normKeySuper(nome);
+    var kRaw1 = norm(nome);
+    var kRaw2 = kRaw1.replace(/[^a-z0-9]/g, '');
+    var res = dict[kClean] || dict[kRaw1] || dict[kRaw2] ||
+              dict['superintendenciaem' + kClean] || dict['superintendencia em ' + kClean];
+    if (res) return res;
+    if (typeof DIC_CONTATOS_PADRAO !== 'undefined' && DIC_CONTATOS_PADRAO) {
+      return DIC_CONTATOS_PADRAO[kClean] || DIC_CONTATOS_PADRAO[kRaw1] || DIC_CONTATOS_PADRAO[kRaw2] ||
+             DIC_CONTATOS_PADRAO['superintendenciaem' + kClean] || null;
+    }
+    return null;
   }
 
   var todosMunicipios = [];
@@ -2394,7 +2680,12 @@ cat(r"---(
 
   function normalizarTexto(txt) {
     if (!txt) return '';
-    return txt.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    return txt.toString().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/['"`´]/g, '')
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   function getCategoriaNivel(p) {
@@ -2440,8 +2731,15 @@ cat(r"---(
     todosMunicipios = features.map(function(f) {
       var p = f.properties || {};
       var cat = getCategoriaNivel(p);
+      var ibgeCode = p.ibge || p.cd_mun_7 || p.cod_ibge || '';
+      var infoPrf = window.getContatoPrf ? window.getContatoPrf(ibgeCode, p.nome) : null;
+      var infoDnit = window.getContatoDnit ? window.getContatoDnit(ibgeCode, p.nome) : null;
+      var infoAntt = window.getContatoAntt ? window.getContatoAntt(ibgeCode, p.nome) : null;
+      var infoMunicipal = window.getContatoMunicipal ? window.getContatoMunicipal(ibgeCode, p.nome) : null;
+
       return {
         nome: p.nome || '',
+        ibge: ibgeCode,
         super: p.super || '',
         categoriaNivel: cat,
         nivel_apoio: p.nivel_apoio,
@@ -2457,8 +2755,14 @@ cat(r"---(
         acoes_txt: p.acoes || '',
         abord_txt: p.abordagens || '',
         artesp: +p.artesp === 1,
-        antt: +p.antt === 1,
-        prf: +p.prf === 1,
+        antt: (+p.antt === 1) || !!infoAntt,
+        prf: (+p.prf === 1) || !!infoPrf,
+        dnit: (+p.dnit === 1) || !!infoDnit,
+        municipal: !!infoMunicipal,
+        prf_info: infoPrf,
+        dnit_info: infoDnit,
+        antt_info: infoAntt,
+        municipal_info: infoMunicipal,
         sem_adesao: p.sem_adesao == 1
       };
     });
@@ -2497,7 +2801,8 @@ cat(r"---(
       if (m.pm) orgaosSet['PM: ' + m.pm.replace(/^CPI-\d+\s*/, '')] = 'pm:' + m.pm;
       if (m.artesp) orgaosSet['Rodovia: ARTESP (Estadual)'] = 'rod:artesp';
       if (m.antt) orgaosSet['Rodovia: ANTT (Federal)'] = 'rod:antt';
-      if (m.prf) orgaosSet['Rodovia: PRF/DNIT (Federal)'] = 'rod:prf';
+      if (m.prf) orgaosSet['Rodovia: PRF (Federal)'] = 'rod:prf';
+      if (m.dnit) orgaosSet['Rodovia: DNIT (Federal)'] = 'rod:dnit';
     });
 
     var optHtml = '<option value="">Todas as Regionais e Rodovias</option>';
@@ -2514,7 +2819,7 @@ cat(r"---(
     var sntSel = document.getElementById('filtro-snt') ? document.getElementById('filtro-snt').value : '';
     var orgaoSel = document.getElementById('filtro-orgao-tabela') ? document.getElementById('filtro-orgao-tabela').value : '';
 
-    municipiosFiltrados = todosMunicipios.filter(function(m) {
+    function satisfazSelects(m) {
       if (superSel && m.super !== superSel) return false;
       if (nivelSel && m.categoriaNivel !== nivelSel) return false;
       if (sntSel) {
@@ -2529,17 +2834,43 @@ cat(r"---(
         if (tipo === 'pm' && m.pm !== valor) return false;
         if (tipo === 'rod' && !m[valor]) return false;
       }
-      if (busca) {
-        var strBusca = normalizarTexto(m.nome + ' ' + m.super + ' ' + m.der + ' ' + m.saude + ' ' + m.pm + ' ' + m.categoriaNivel);
-        if (strBusca.indexOf(busca) === -1) return false;
-      }
       return true;
-    });
+    }
+
+    if (busca) {
+      var tokens = busca.split(' ').filter(Boolean);
+
+      // 1. Prioridade absoluta: busca direta por Município (nome ou código IBGE)
+      var nomeMatches = todosMunicipios.filter(function(m) {
+        if (!satisfazSelects(m)) return false;
+        var nNorm = normalizarTexto(m.nome);
+        var iNorm = normalizarTexto(m.ibge || '');
+        return tokens.every(function(t) {
+          return nNorm.indexOf(t) !== -1 || iNorm.indexOf(t) !== -1;
+        });
+      });
+
+      if (nomeMatches.length > 0) {
+        municipiosFiltrados = nomeMatches;
+      } else {
+        // 2. Fallback: se nenhum município tiver esse nome/código, busca nas regionais/órgãos
+        municipiosFiltrados = todosMunicipios.filter(function(m) {
+          if (!satisfazSelects(m)) return false;
+          var regNorm = normalizarTexto((m.super || '') + ' ' + (m.der || '') + ' ' + (m.saude || '') + ' ' + (m.pm || '') + ' ' + (m.categoriaNivel || ''));
+          return tokens.every(function(t) {
+            return regNorm.indexOf(t) !== -1;
+          });
+        });
+      }
+    } else {
+      municipiosFiltrados = todosMunicipios.filter(satisfazSelects);
+    }
 
     ordenarDados();
     paginaAtual = 1;
     renderizarTabela();
   }
+  window.aplicarFiltros = aplicarFiltros;
 
   function compararPorRegra(a, b, col, dir) {
     var r = 0;
@@ -2572,7 +2903,24 @@ cat(r"---(
   }
 
   function ordenarDados() {
+    var busca = normalizarTexto(document.getElementById('filtro-busca') ? document.getElementById('filtro-busca').value : '');
     municipiosFiltrados.sort(function(a, b) {
+      if (busca) {
+        var aNorm = normalizarTexto(a.nome);
+        var bNorm = normalizarTexto(b.nome);
+        
+        // 1. Correspondência exata do nome no topo
+        var aExact = (aNorm === busca);
+        var bExact = (bNorm === busca);
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+
+        // 2. Município cujo nome começa com o termo de busca
+        var aStarts = (aNorm.indexOf(busca) === 0);
+        var bStarts = (bNorm.indexOf(busca) === 0);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+      }
       for (var i = 0; i < regrasOrdenacao.length; i++) {
         var diff = compararPorRegra(a, b, regrasOrdenacao[i].col, regrasOrdenacao[i].dir);
         if (diff !== 0) return diff;
@@ -2762,6 +3110,8 @@ cat(r"---(
       if (m.artesp) tagsRod.push('<span class="tb-tag-artesp" title="Rodovias concedidas sob regulação ARTESP">ARTESP</span>');
       if (m.antt) tagsRod.push('<span class="tb-tag-antt" title="Rodovias federais concedidas sob regulação ANTT">ANTT</span>');
       if (m.prf) tagsRod.push('<span class="tb-tag-prf" title="Fiscalização da Polícia Rodoviária Federal">PRF</span>');
+      if (m.dnit) tagsRod.push('<span class="tb-tag-dnit" title="Departamento Nacional de Infraestrutura de Transportes">DNIT</span>');
+      if (m.municipal) tagsRod.push('<span class="tb-tag-municipal" title="Órgão Municipal de Trânsito / Mobilidade">MUNICIPAL</span>');
       var rodoviasHtml = tagsRod.length ? tagsRod.join('') : '<span style="color: #94a3b8;">-</span>';
 
       var derHtml = esc(m.der || '-');
@@ -3044,9 +3394,10 @@ cat(r"---(
           if (c.adjunto_nome) {
             partes.push('Adjunto: ' + c.adjunto_nome + (c.adjunto_tel ? ' (Tel: ' + c.adjunto_tel + ')' : '') + (c.adjunto_email ? ' [' + c.adjunto_email + ']' : ''));
           }
-          infoContatos = partes.join(' / ');
+          if (partes.length) infoContatos = partes.join(' / ');
         }
-        addOrgao('DETRAN-SP', 'Superintendência em ' + (c && c.superintendencia ? c.superintendencia : sNome), infoContatos, supersMap[sNome]);
+        var sTitulo = limparNomeSuper((c && c.superintendencia) ? c.superintendencia : sNome);
+        addOrgao('DETRAN-SP', 'Superintendência em ' + sTitulo, infoContatos, supersMap[sNome]);
       });
 
       Object.keys(dersMap).sort().forEach(function(d) {
@@ -3178,7 +3529,11 @@ cat(r"---(
     var pmsMap = {};
     var sesMap = {};
     var supersMap = {};
-    var prfMuns = [];
+    var prfMap = {};
+    var dnitMap = {};
+    var anttMap = {};
+    var municipalMap = {};
+    var prfSemContato = [];
 
     selMuns.forEach(function(m) {
       if (m.super) {
@@ -3197,10 +3552,35 @@ cat(r"---(
         if (!sesMap[m.saude]) sesMap[m.saude] = [];
         sesMap[m.saude].push(m.nome);
       }
-      if (m.prf) prfMuns.push(m.nome);
+      // PRF: agrupa pela Delegacia cadastrada
+      if (m.prf_info) {
+        var dNome = m.prf_info.delegacia || ('Delegacia ' + m.nome);
+        if (!prfMap[dNome]) prfMap[dNome] = { info: m.prf_info, muns: [] };
+        if (prfMap[dNome].muns.indexOf(m.nome) === -1) prfMap[dNome].muns.push(m.nome);
+      } else if (m.prf) {
+        prfSemContato.push(m.nome);
+      }
+      // DNIT: agrupa pela Região Metropolitana cadastrada
+      if (m.dnit_info) {
+        var rNome = m.dnit_info.regiao || 'Regional DNIT';
+        if (!dnitMap[rNome]) dnitMap[rNome] = { info: m.dnit_info, muns: [] };
+        if (dnitMap[rNome].muns.indexOf(m.nome) === -1) dnitMap[rNome].muns.push(m.nome);
+      }
+      // ANTT: agrupa pelos polos cadastrados
+      if (m.antt_info) {
+        var aNome = m.antt_info.municipio || m.nome;
+        if (!anttMap[aNome]) anttMap[aNome] = { info: m.antt_info, muns: [] };
+        if (anttMap[aNome].muns.indexOf(m.nome) === -1) anttMap[aNome].muns.push(m.nome);
+      }
+      // Órgão Municipal (ex: SEMOB Guarulhos)
+      if (m.municipal_info) {
+        var munInst = m.municipal_info.instituicao || ('Mobilidade ' + m.nome);
+        if (!municipalMap[munInst]) municipalMap[munInst] = { info: m.municipal_info, muns: [] };
+        if (municipalMap[munInst].muns.indexOf(m.nome) === -1) municipalMap[munInst].muns.push(m.nome);
+      }
     });
 
-    var totalDivisoes = Object.keys(supersMap).length + Object.keys(dersMap).length + Object.keys(pmsMap).length + Object.keys(sesMap).length + (prfMuns.length > 0 ? 1 : 0);
+    var totalDivisoes = Object.keys(supersMap).length + Object.keys(dersMap).length + Object.keys(pmsMap).length + Object.keys(sesMap).length + Object.keys(prfMap).length + Object.keys(dnitMap).length + Object.keys(anttMap).length + Object.keys(municipalMap).length + (Object.keys(prfMap).length === 0 && prfSemContato.length > 0 ? 1 : 0);
     var subinfo = document.getElementById('tb-drawer-subinfo');
     if (subinfo) {
       subinfo.textContent = '| ' + totalDivisoes + (totalDivisoes === 1 ? ' divisão regional envolvida' : ' divisões regionais envolvidas');
@@ -3242,7 +3622,7 @@ cat(r"---(
 
       function renderCardSuperintendencia(superNome, munsList) {
         var c = getContatoSuper(superNome);
-        var superTitulo = c && c.superintendencia ? c.superintendencia : superNome;
+        var superTitulo = limparNomeSuper(superNome || (c && c.superintendencia ? c.superintendencia : ''));
         
         var superNomeVal = c ? c.superintendente_nome : '';
         var superEmailVal = c ? c.superintendente_email : '';
@@ -3375,10 +3755,79 @@ cat(r"---(
         cardsHtml += renderCard('PMESP', 'Polícia Militar do Estado de SP', '#333335', 'bi-shield-shaded', pm, 'Comando Regional', pmsMap[pm], 'tb-org-pm', '#ffffff');
       });
 
-      // 4. PRF (Azul Rodoviário Federal)
-      if (prfMuns.length > 0) {
-        cardsHtml += renderCard('PRF', 'Polícia Rodoviária Federal', '#1e40af', 'bi-cone-striped', 'Delegacia PRF / SP', 'Jurisdição Federal', prfMuns, 'tb-org-prf', '#ffffff');
+      function renderCardComContato(orgaoNome, titulo, cor, icone, divisaoNome, rotuloDiv, respNome, cargo, tel, email, munsList, orgClass, txtCor) {
+        var textStyle = txtCor ? 'color: ' + txtCor + ';' : '';
+        var h = '<div class="tb-org-card ' + (orgClass || '') + '">';
+        h += '  <div class="tb-org-header" style="background-color: ' + cor + '; ' + textStyle + '">';
+        h += '    <div class="tb-org-header-title">';
+        h += '      <i class="bi ' + icone + '" style="' + textStyle + '"></i>';
+        h += '      <span>' + esc(orgaoNome) + '</span>';
+        h += '    </div>';
+        h += '    <span class="tb-org-divisao-badge" style="' + textStyle + '">' + esc(divisaoNome) + '</span>';
+        h += '  </div>';
+        h += '  <div class="tb-org-body">';
+        h += '    <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">' + esc(titulo) + ' • ' + esc(rotuloDiv) + ': <strong>' + esc(divisaoNome) + '</strong></div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-person-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Responsável:</span>';
+        h += '      <span class="tb-contact-val">' + (respNome ? '<strong>' + esc(respNome) + '</strong>' : '<span class="tb-placeholder-text">Não informado</span>') + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-briefcase-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Cargo:</span>';
+        h += '      <span class="tb-contact-val">' + (cargo ? esc(cargo) : '<span class="tb-placeholder-text">Não informado</span>') + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-telephone-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">Telefone:</span>';
+        h += '      <span class="tb-contact-val">' + formatarTelefones(tel) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-contact-row">';
+        h += '      <i class="bi bi-envelope-fill tb-contact-icon"></i>';
+        h += '      <span class="tb-contact-label">E-mail:</span>';
+        h += '      <span class="tb-contact-val">' + formatarEmail(email) + '</span>';
+        h += '    </div>';
+        h += '    <div class="tb-org-footer-muns">';
+        h += '      <strong>Municípios abrangidos (' + munsList.length + '):</strong>';
+        h += '      <div class="tb-muns-chips-container">';
+        munsList.forEach(function(nm) {
+          h += '<span class="tb-chip-mun">' + esc(nm) + '</span>';
+        });
+        h += '      </div>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '</div>';
+        return h;
       }
+
+      // 4. PRF (Azul Rodoviário Federal #1e40af)
+      if (Object.keys(prfMap).length > 0) {
+        Object.keys(prfMap).sort().forEach(function(dKey) {
+          var item = prfMap[dKey];
+          cardsHtml += renderCardComContato('PRF', 'Polícia Rodoviária Federal', '#1e40af', 'bi-cone-striped', item.info.delegacia || dKey, 'Delegacia PRF', item.info.nome, item.info.cargo || 'Chefe de Delegacia', item.info.telefone, item.info.email, item.muns, 'tb-org-prf', '#ffffff');
+        });
+      } else if (prfSemContato.length > 0) {
+        cardsHtml += renderCard('PRF', 'Polícia Rodoviária Federal', '#1e40af', 'bi-cone-striped', 'Delegacia PRF / SP', 'Jurisdição Federal', prfSemContato, 'tb-org-prf', '#ffffff');
+      }
+
+      // 5. DNIT (Verde Petróleo #0f766e)
+      Object.keys(dnitMap).sort().forEach(function(rKey) {
+        var item = dnitMap[rKey];
+        cardsHtml += renderCardComContato('DNIT', 'Departamento Nacional de Infraestrutura de Transportes', '#0f766e', 'bi-signpost-fill', item.info.regiao || rKey, 'Jurisdição Regional', item.info.nome, item.info.cargo || 'Serviço de Operações Terrestres', item.info.telefone, item.info.email, item.muns, 'tb-org-dnit', '#ffffff');
+      });
+
+      // 6. ANTT (Roxo Institucional #7c3aed)
+      Object.keys(anttMap).sort().forEach(function(aKey) {
+        var item = anttMap[aKey];
+        var divLabel = 'Polo ' + (item.info.municipio || aKey);
+        cardsHtml += renderCardComContato('ANTT', 'Agência Nacional de Transportes Terrestres', '#7c3aed', 'bi-bus-front-fill', divLabel, 'Regulação Federal', item.info.nome, item.info.cargo || 'Ponto Focal ANTT', item.info.telefone, item.info.email, item.muns, 'tb-org-antt', '#ffffff');
+      });
+
+      // 7. Órgão Municipal (Âmbar #d97706)
+      Object.keys(municipalMap).sort().forEach(function(mKey) {
+        var item = municipalMap[mKey];
+        cardsHtml += renderCardComContato('MUNICIPAL', item.info.instituicao || 'Órgão Municipal de Trânsito', '#d97706', 'bi-building-fill', item.info.municipio || 'Gestão Municipal', 'Órgão de Trânsito', item.info.nome, item.info.cargo || 'Seção Técnica', item.info.telefone, item.info.email, item.muns, 'tb-org-semob', '#ffffff');
+      });
 
       gridEl.innerHTML = cardsHtml;
     }
@@ -3391,6 +3840,23 @@ cat(r"---(
     var buscaInput = document.getElementById('filtro-busca');
     if (buscaInput) {
       buscaInput.addEventListener('input', function() { aplicarFiltros(); });
+      buscaInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          this.value = '';
+          aplicarFiltros();
+        } else {
+          aplicarFiltros();
+        }
+      });
+      buscaInput.addEventListener('change', function() { aplicarFiltros(); });
+      buscaInput.addEventListener('search', function() { aplicarFiltros(); });
+      buscaInput.addEventListener('paste', function() { setTimeout(aplicarFiltros, 10); });
+      buscaInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          aplicarFiltros();
+        }
+      });
     }
 
     var superSelect = document.getElementById('filtro-super');
