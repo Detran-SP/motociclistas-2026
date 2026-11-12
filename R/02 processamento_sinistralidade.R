@@ -62,7 +62,18 @@ if (file.exists("data/mun_sistran.csv")) {
   }
 }
 
-# Atualização de contatos institucionais adicionais (PRF, DNIT, ANTT, SEMOB)
+# Atualização de contatos institucionais adicionais (PRF, DNIT, ANTT, SEMOB, SES-SP)
+if (file.exists("data/contatos_drs.csv")) {
+  tb_drs <- read.csv("data/contatos_drs.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
+    select(CD_MUN_7 = `Código IBGE`, DRS_REGIAO = Regional, DRS_SETOR = Setor,
+           DRS_RESPONSAVEL = `Nome completo`, DRS_CARGO = Cargo,
+           DRS_EMAIL = `E-mail`, DRS_TELEFONE = Telefone) |> 
+    mutate(CD_MUN_7 = as.integer(CD_MUN_7))
+  bd_municipios <- bd_municipios |> 
+    left_join(tb_drs, by = "CD_MUN_7") |> 
+    mutate(PONTO_FOCAL_DRS = coalesce(DRS_RESPONSAVEL, PONTO_FOCAL_DRS))
+}
+
 if (file.exists("data/contatos_prf.csv")) {
   tb_prf <- read.csv("data/contatos_prf.csv", stringsAsFactors = FALSE, check.names = FALSE) |> 
     select(CD_MUN_7 = `Código IBGE`, PRF_DELEGACIA = Delegacia, PRF_RESPONSAVEL = `Nome completo`,

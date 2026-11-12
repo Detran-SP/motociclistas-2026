@@ -314,6 +314,43 @@ if (!is.null(p_guar)) {
   }, error = function(e) NULL)
 }
 
+cods_drs <- character()
+contatos_drs_json <- "{}"
+p_drs <- ler_csv_path("contatos_drs.csv")
+if (!is.null(p_drs)) {
+  tryCatch({
+    df_drs <- read.csv(p_drs, stringsAsFactors = FALSE, check.names = FALSE)
+    cods_drs <- trimws(as.character(df_drs[[2]]))
+    lista_drs <- list()
+    for (i in seq_len(nrow(df_drs))) {
+      reg_raw   <- trimws(as.character(df_drs[[1]][i]))
+      cod       <- trimws(as.character(df_drs[[2]][i]))
+      nm        <- trimws(stringi::stri_trans_general(df_drs[[3]][i], "Latin-ASCII"))
+      k_nome    <- tolower(gsub("[^a-zA-Z0-9]+", "", nm))
+      reg_ascii <- trimws(stringi::stri_trans_general(reg_raw, "Latin-ASCII"))
+      k_reg     <- tolower(gsub("[^a-zA-Z0-9]+", "", reg_ascii))
+      k_reg_esp <- tolower(trimws(gsub("[^a-zA-Z0-9 ]+", "", reg_ascii)))
+      item <- list(
+        regional  = reg_raw,
+        ibge      = cod,
+        municipio = trimws(as.character(df_drs[[3]][i])),
+        setor     = trimws(as.character(df_drs[[4]][i])),
+        nome      = trimws(as.character(df_drs[[5]][i])),
+        cargo     = trimws(as.character(df_drs[[6]][i])),
+        email     = trimws(as.character(df_drs[[7]][i])),
+        telefone  = trimws(as.character(df_drs[[8]][i]))
+      )
+      lista_drs[[cod]] <- item
+      lista_drs[[k_nome]] <- item
+      if (nzchar(k_reg)) {
+        lista_drs[[k_reg]] <- item
+        lista_drs[[k_reg_esp]] <- item
+      }
+    }
+    contatos_drs_json <- jsonlite::toJSON(lista_drs, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
 # ---- Contatos dos Superintendentes e Adjuntos via data/contatos_superintendentes.csv ----
 contatos_csv_path <- if (file.exists("../data/contatos_superintendentes.csv")) "../data/contatos_superintendentes.csv" else if (file.exists("data/contatos_superintendentes.csv")) "data/contatos_superintendentes.csv" else NULL
 contatos_super_json <- "{}"
@@ -560,6 +597,33 @@ function(el, x, data) {
     if (nome) {
       var k1 = norm(nome), k2 = k1.replace(/[^a-z0-9]/g, '');
       return dict[k1] || dict[k2] || null;
+    }
+    return null;
+  };
+
+  var DIC_CONTATOS_DRS_PADRAO = {
+    "drsxvisorocaba": { "regional": "DRS XVI - Sorocaba", "setor": "Núcleo de Organização de Redes/CPA", "nome": "Karina Rauen Rossi", "cargo": "Diretor Técnico de Saúde I", "email": "drs16-norsdiretoria@saude.sp.gov.br", "telefone": "(15) 3233-1605" },
+    "drsxvi": { "regional": "DRS XVI - Sorocaba", "setor": "Núcleo de Organização de Redes/CPA", "nome": "Karina Rauen Rossi", "cargo": "Diretor Técnico de Saúde I", "email": "drs16-norsdiretoria@saude.sp.gov.br", "telefone": "(15) 3233-1605" },
+    "sorocaba": { "regional": "DRS XVI - Sorocaba", "setor": "Núcleo de Organização de Redes/CPA", "nome": "Karina Rauen Rossi", "cargo": "Diretor Técnico de Saúde I", "email": "drs16-norsdiretoria@saude.sp.gov.br", "telefone": "(15) 3233-1605" }
+  };
+
+  var CONTATOS_DRS = (data && data.contatos_drs) ? (typeof data.contatos_drs === 'string' ? JSON.parse(data.contatos_drs) : data.contatos_drs) : null;
+  if (!CONTATOS_DRS || Object.keys(CONTATOS_DRS).length === 0) {
+    CONTATOS_DRS = DIC_CONTATOS_DRS_PADRAO;
+  }
+  window.contatosDrs = CONTATOS_DRS;
+
+  window.getContatoDrs = function(regiaoNome, ibge, munNome) {
+    var dict = window.contatosDrs || DIC_CONTATOS_DRS_PADRAO;
+    if (!dict) return null;
+    if (ibge && dict[String(ibge).trim()]) return dict[String(ibge).trim()];
+    if (regiaoNome) {
+      var k1 = norm(regiaoNome), k2 = k1.replace(/[^a-z0-9]/g, '');
+      if (dict[k1] || dict[k2]) return dict[k1] || dict[k2];
+    }
+    if (munNome) {
+      var m1 = norm(munNome), m2 = m1.replace(/[^a-z0-9]/g, '');
+      if (dict[m1] || dict[m2]) return dict[m1] || dict[m2];
     }
     return null;
   };
@@ -2264,7 +2328,8 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
                            contatos_prf       = contatos_prf_json,
                            contatos_dnit      = contatos_dnit_json,
                            contatos_antt      = contatos_antt_json,
-                           contatos_municipal = contatos_municipal_json))
+                           contatos_municipal = contatos_municipal_json,
+                           contatos_drs       = contatos_drs_json))
 ```
 
 # Tabela de Dados {icon="table"}
@@ -3407,7 +3472,16 @@ cat(r"---(
         addOrgao('PMESP', p, pmsPf[p], pmsMap[p]);
       });
       Object.keys(sesMap).sort().forEach(function(s) {
-        addOrgao('SES-SP', s, sesPf[s], sesMap[s]);
+        var c = (typeof getContatoDrs === 'function') ? getContatoDrs(s) : null;
+        var contatoTxt = sesPf[s] || 'Não cadastrado';
+        if (c && c.nome) {
+          var partes = [c.nome];
+          if (c.cargo) partes.push(c.cargo + (c.setor ? ' - ' + c.setor : ''));
+          if (c.telefone) partes.push('Tel: ' + c.telefone);
+          if (c.email) partes.push('[' + c.email + ']');
+          contatoTxt = partes.join(' / ');
+        }
+        addOrgao('SES-SP', s, contatoTxt, sesMap[s]);
       });
       if (artespMuns.length > 0) {
         addOrgao('Rodovias Concedidas', 'ARTESP (Estadual)', '', artespMuns);
@@ -3747,7 +3821,13 @@ cat(r"---(
 
       // 2. SES-SP (Verde Claro Saúde #10b981)
       Object.keys(sesMap).sort().forEach(function(ses) {
-        cardsHtml += renderCard('SES-SP', 'Secretaria de Estado da Saúde', '#10b981', 'bi-heart-pulse-fill', ses, 'Regional DRS', sesMap[ses], 'tb-org-ses', '#ffffff');
+        var c = (typeof getContatoDrs === 'function') ? getContatoDrs(ses) : null;
+        if (c && c.nome) {
+          var cargoDesc = c.cargo ? (c.cargo + (c.setor ? ' (' + c.setor + ')' : '')) : (c.setor || 'Diretoria Regional');
+          cardsHtml += renderCardComContato('SES-SP', 'Secretaria de Estado da Saúde', '#10b981', 'bi-heart-pulse-fill', ses, 'Regional DRS', c.nome, cargoDesc, c.telefone, c.email, sesMap[ses], 'tb-org-ses', '#ffffff');
+        } else {
+          cardsHtml += renderCard('SES-SP', 'Secretaria de Estado da Saúde', '#10b981', 'bi-heart-pulse-fill', ses, 'Regional DRS', sesMap[ses], 'tb-org-ses', '#ffffff');
+        }
       });
 
       // 3. PMESP (Cinza Institucional #333335)
