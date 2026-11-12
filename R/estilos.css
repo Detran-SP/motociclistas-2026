@@ -455,6 +455,30 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-block;
 }
 
+.tb-tag-dnit {
+  background: #ccfbf1;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-right: 3px;
+  display: inline-block;
+}
+
+.tb-tag-municipal {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-right: 3px;
+  display: inline-block;
+}
+
 .tb-btn-mapa {
   background: #005ca8;
   color: #ffffff !important;
@@ -1198,6 +1222,81 @@ tr.tr-selected:hover {
 }
 .tb-org-card.tb-org-detran .tb-org-footer-muns {
   border-top: 1px dashed #bae6fd;
+}
+
+/* DNIT: Verde Petróleo (#0f766e) */
+.tb-org-card.tb-org-dnit {
+  border: 2px solid #0f766e !important;
+}
+.tb-org-card.tb-org-dnit .tb-org-header {
+  background: #0f766e !important;
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-dnit .tb-org-header i {
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-dnit .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.tb-org-card.tb-org-dnit .tb-chip-mun {
+  background: #ccfbf1;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+}
+.tb-org-card.tb-org-dnit .tb-org-footer-muns {
+  border-top: 1px dashed #99f6e4;
+}
+
+/* ANTT: Roxo Institucional (#7c3aed) */
+.tb-org-card.tb-org-antt {
+  border: 2px solid #7c3aed !important;
+}
+.tb-org-card.tb-org-antt .tb-org-header {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-antt .tb-org-header i {
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-antt .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.tb-org-card.tb-org-antt .tb-chip-mun {
+  background: #f3e8ff;
+  color: #7c3aed;
+  border: 1px solid #d8b4fe;
+}
+.tb-org-card.tb-org-antt .tb-org-footer-muns {
+  border-top: 1px dashed #d8b4fe;
+}
+
+/* SEMOB / Órgão Municipal: Âmbar (#d97706) */
+.tb-org-card.tb-org-semob {
+  border: 2px solid #d97706 !important;
+}
+.tb-org-card.tb-org-semob .tb-org-header {
+  background: #d97706 !important;
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-semob .tb-org-header i {
+  color: #ffffff !important;
+}
+.tb-org-card.tb-org-semob .tb-org-divisao-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.tb-org-card.tb-org-semob .tb-chip-mun {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.tb-org-card.tb-org-semob .tb-org-footer-muns {
+  border-top: 1px dashed #fde68a;
 }
 
 .tb-contact-link {
