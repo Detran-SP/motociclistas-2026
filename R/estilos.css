@@ -108,23 +108,44 @@ h1, h2, h3, h4, h5, h6 {
    ========================================================================== */
 
 /* Gerenciamento de visibilidade das abas do dashboard */
-#mapa-dinamico:not(.active) {
-  display: none !important;
-}
-
-#tabela-dados:not(.active) {
-  display: none !important;
-}
-#tabela-dados.active {
+#tabela-dados {
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
   width: 100% !important;
   box-sizing: border-box !important;
   padding: 16px 20px !important;
   background-color: #f1f5f9 !important;
   overflow: hidden !important;
   font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* O dashboard envolve o conteúdo desta página em um card próprio.
+   Remove o espaçamento desse invólucro para preservar o layout da tabela. */
+#tabela-de-dados > .bslib-grid {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#tabela-de-dados > .bslib-grid > .bslib-card {
+  height: 100% !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#tabela-de-dados > .bslib-grid > .bslib-card > .card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Card Principal */

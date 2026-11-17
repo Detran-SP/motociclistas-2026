@@ -397,6 +397,41 @@ if (!is.null(p_der)) {
   }, error = function(e) NULL)
 }
 
+# ---- Contatos regionais da PMESP via data/contatos_pmesp.csv ----
+contatos_pmesp_json <- "{}"
+p_pmesp <- ler_csv_path("contatos_pmesp.csv")
+if (!is.null(p_pmesp)) {
+  tryCatch({
+    df_pmesp <- read.csv(p_pmesp, sep = ";", fileEncoding = "latin1", stringsAsFactors = FALSE, check.names = FALSE)
+    lista_pmesp <- list()
+    for (i in seq_len(nrow(df_pmesp))) {
+      estrutura <- trimws(stringi::stri_replace_all_fixed(as.character(df_pmesp[[1]][i]), "\u00a0", " "))
+      estrutura_norm <- norm(estrutura)
+      chave <- if (grepl("capital", estrutura_norm)) {
+        "cpc"
+      } else if (grepl("interior", estrutura_norm)) {
+        numero <- stringr::str_extract(estrutura_norm, "\\d+")
+        if (is.na(numero)) NA_character_ else paste0("cpi-", as.integer(numero))
+      } else if (grepl("metropolitano", estrutura_norm)) {
+        "cpm"
+      } else {
+        NA_character_
+      }
+      if (is.na(chave)) next
+
+      lista_pmesp[[chave]] <- list(
+        estrutura = estrutura,
+        municipio = trimws(stringi::stri_replace_all_fixed(as.character(df_pmesp[[2]][i]), "\u00a0", " ")),
+        nome      = trimws(stringi::stri_replace_all_fixed(as.character(df_pmesp[[3]][i]), "\u00a0", " ")),
+        cargo     = trimws(stringi::stri_replace_all_fixed(as.character(df_pmesp[[4]][i]), "\u00a0", " ")),
+        email     = trimws(stringi::stri_replace_all_fixed(as.character(df_pmesp[[5]][i]), "\u00a0", " ")),
+        telefone  = trimws(stringi::stri_replace_all_fixed(as.character(df_pmesp[[6]][i]), "\u00a0", " "))
+      )
+    }
+    contatos_pmesp_json <- jsonlite::toJSON(lista_pmesp, auto_unbox = TRUE)
+  }, error = function(e) NULL)
+}
+
 # ---- Contatos dos Superintendentes e Adjuntos via data/contatos_superintendentes.csv ----
 contatos_csv_path <- if (file.exists("../data/contatos_superintendentes.csv")) "../data/contatos_superintendentes.csv" else if (file.exists("data/contatos_superintendentes.csv")) "data/contatos_superintendentes.csv" else NULL
 contatos_super_json <- "{}"
@@ -413,7 +448,7 @@ if (!is.null(contatos_csv_path)) {
     lista_contatos <- list()
     for (i in seq_len(nrow(df_contatos))) {
       raw_val <- df_contatos[[1]][i]
-      raw_nome <- gsub("[\s\x{00a0}\xc2\xa0]+", " ", raw_val, perl = TRUE)
+      raw_nome <- gsub("[\\s\\x{00a0}\\xc2\\xa0]+", " ", raw_val, perl = TRUE)
       nome_limpo <- trimws(sub("^[Ss]uperintend[eê]ncia em ", "", raw_nome))
       nome_ascii <- trimws(stringi::stri_trans_general(nome_limpo, "Latin-ASCII"))
       chave <- tolower(gsub("[^a-zA-Z0-9]+", "", nome_ascii))
@@ -671,6 +706,17 @@ function(el, x, data) {
       var m1 = norm(munNome), m2 = m1.replace(/[^a-z0-9]/g, '');
       if (dict[m1] || dict[m2]) return dict[m1] || dict[m2];
     }
+    return null;
+  };
+
+  var CONTATOS_PMESP = (data && data.contatos_pmesp) ? (typeof data.contatos_pmesp === 'string' ? JSON.parse(data.contatos_pmesp) : data.contatos_pmesp) : {};
+  window.getContatoPmesp = function(comando) {
+    if (!comando) return null;
+    var chave = norm(comando);
+    var cpi = chave.match(/^cpi\s*[-–]?\s*(\d+)/);
+    if (cpi) return CONTATOS_PMESP['cpi-' + parseInt(cpi[1], 10)] || null;
+    if (/^cpc\b/.test(chave)) return CONTATOS_PMESP.cpc || null;
+    if (/^cpm\b/.test(chave)) return CONTATOS_PMESP.cpm || null;
     return null;
   };
 
@@ -2408,6 +2454,7 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
   onRender(js, data = list(super              = para_geojson(super_js),
                            mun                = para_geojson(mun_js),
                            contatos           = contatos_super_json,
+                           contatos_pmesp     = contatos_pmesp_json,
                            contatos_prf       = contatos_prf_json,
                            contatos_dnit      = contatos_dnit_json,
                            contatos_antt      = contatos_antt_json,
@@ -2418,12 +2465,7 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
 
 # Tabela de Dados {icon="table"}
 
-```{r}
-#| label: Tabela
-#| echo: false
-#| results: asis
-
-cat(r"---(
+```{=html}
 <!-- Modal Institucional de Metodologia e Critérios -->
 <div id="modal-metodologia" class="mdn-modal-overlay">
   <div class="mdn-modal-container">
@@ -2505,7 +2547,7 @@ cat(r"---(
   </div>
 </div>
 
-<div id="tabela-dados" class="dashboard-page tab-pane tb-container">
+<div id="tabela-dados" class="tb-container">
   <div class="tb-card">
     <!-- Cabeçalho com Título, Subtítulo e Botões de Ação -->
     <div class="tb-header">
@@ -2712,6 +2754,15 @@ cat(r"---(
 
 <script>
 (function() {
+  // O Quarto atual injeta classes de preenchimento nos divs deste bloco HTML.
+  // Elas alteram o flex layout próprio da tabela e do painel de articulação.
+  var corpoTabela = document.querySelector('#tabela-de-dados .card-body');
+  if (corpoTabela) {
+    corpoTabela.querySelectorAll('.html-fill-item, .html-fill-container').forEach(function(el) {
+      el.classList.remove('html-fill-item', 'html-fill-container');
+    });
+  }
+
   var DIC_CONTATOS_PADRAO = {
     "aracatuba": { "superintendencia": "Araçatuba", "superintendente_nome": "JOÃO MORAES FAGA NETO", "superintendente_email": "joao.neto@detran.sp.gov.br", "superintendente_tel": "(17) 98168-1745", "adjunto_nome": "José Guilherme Bernardes", "adjunto_email": "jose.bernardes@detran.sp.gov.br", "adjunto_tel": "(18) 996654339" },
     "araraquara": { "superintendencia": "Araraquara", "superintendente_nome": "ERICA PRISCILA DE CARVALHO SANTOS", "superintendente_email": "erica.santos@detran.sp.gov.br", "superintendente_tel": "(16) 99347-7825", "adjunto_nome": "Joao Ricardo Inacio da Silva Silveira", "adjunto_email": "joao.silveira@detran.sp.gov.br", "adjunto_tel": "(16) 98108-7955" },
@@ -2901,6 +2952,7 @@ cat(r"---(
         pf_drs: p.pf_drs || '',
         pm: p.pm || '',
         pf_pm: p.pf_pm || '',
+        pm_info: window.getContatoPmesp ? window.getContatoPmesp(p.pm) : null,
         acoes_txt: p.acoes || '',
         abord_txt: p.abordagens || '',
         artesp: +p.artesp === 1,
@@ -3414,7 +3466,10 @@ cat(r"---(
           'SES-SP DRS': m.saude || '',
           'SES-SP Ponto Focal': m.pf_drs || '',
           'PMESP Comando': m.pm || '',
-          'PMESP Ponto Focal': m.pf_pm || '',
+          'PMESP Ponto Focal': (m.pm_info && m.pm_info.nome) ? m.pm_info.nome : (m.pf_pm || ''),
+          'PMESP Cargo': (m.pm_info && m.pm_info.cargo) || '',
+          'PMESP Telefone': (m.pm_info && m.pm_info.telefone) || '',
+          'PMESP E-mail': (m.pm_info && m.pm_info.email) || '',
           'Concessão ARTESP': m.artesp ? 'Sim' : 'Não',
           'Rodovia Federal ANTT': m.antt ? 'Sim' : 'Não',
           'Fiscalização PRF': m.prf ? 'Sim' : 'Não'
@@ -3501,7 +3556,7 @@ cat(r"---(
       };
 
       var dersMap = {}, dersPf = {};
-      var pmsMap = {}, pmsPf = {};
+      var pmsMap = {}, pmsPf = {}, pmsInfo = {};
       var sesMap = {}, sesPf = {};
       var supersMap = {};
       var artespMuns = [], anttMuns = [], prfMuns = [];
@@ -3520,6 +3575,7 @@ cat(r"---(
           if (!pmsMap[m.pm]) pmsMap[m.pm] = [];
           pmsMap[m.pm].push(m.nome);
           if (m.pf_pm) pmsPf[m.pm] = m.pf_pm;
+          if (m.pm_info) pmsInfo[m.pm] = m.pm_info;
         }
         if (m.saude) {
           if (!sesMap[m.saude]) sesMap[m.saude] = [];
@@ -3563,7 +3619,16 @@ cat(r"---(
         addOrgao('DER-SP', divLabel, contatoTxt, dersMap[d]);
       });
       Object.keys(pmsMap).sort().forEach(function(p) {
-        addOrgao('PMESP', p, pmsPf[p], pmsMap[p]);
+        var c = pmsInfo[p];
+        var contatoTxt = pmsPf[p] || 'Não cadastrado';
+        if (c && c.nome) {
+          var partes = [c.nome];
+          if (c.cargo) partes.push(c.cargo);
+          if (c.telefone) partes.push('Tel: ' + c.telefone);
+          if (c.email) partes.push('[' + c.email + ']');
+          contatoTxt = partes.join(' / ');
+        }
+        addOrgao('PMESP', p, contatoTxt, pmsMap[p]);
       });
       Object.keys(sesMap).sort().forEach(function(s) {
         var c = (typeof getContatoDrs === 'function') ? getContatoDrs(s) : null;
@@ -3695,6 +3760,7 @@ cat(r"---(
 
     var dersMap = {};
     var pmsMap = {};
+    var pmsInfo = {};
     var sesMap = {};
     var supersMap = {};
     var prfMap = {};
@@ -3715,6 +3781,7 @@ cat(r"---(
       if (m.pm) {
         if (!pmsMap[m.pm]) pmsMap[m.pm] = [];
         pmsMap[m.pm].push(m.nome);
+        if (m.pm_info) pmsInfo[m.pm] = m.pm_info;
       }
       if (m.saude) {
         if (!sesMap[m.saude]) sesMap[m.saude] = [];
@@ -3932,7 +3999,12 @@ cat(r"---(
 
       // 3. PMESP (Cinza Institucional #333335)
       Object.keys(pmsMap).sort().forEach(function(pm) {
-        cardsHtml += renderCard('PMESP', 'Polícia Militar do Estado de SP', '#333335', 'bi-shield-shaded', pm, 'Comando Regional', pmsMap[pm], 'tb-org-pm', '#ffffff');
+        var c = pmsInfo[pm];
+        if (c && c.nome) {
+          cardsHtml += renderCardComContato('PMESP', 'Polícia Militar do Estado de SP', '#333335', 'bi-shield-shaded', pm, 'Comando Regional', c.nome, c.cargo, c.telefone, c.email, pmsMap[pm], 'tb-org-pm', '#ffffff');
+        } else {
+          cardsHtml += renderCard('PMESP', 'Polícia Militar do Estado de SP', '#333335', 'bi-shield-shaded', pm, 'Comando Regional', pmsMap[pm], 'tb-org-pm', '#ffffff');
+        }
       });
 
       function renderCardComContato(orgaoNome, titulo, cor, icone, divisaoNome, rotuloDiv, respNome, cargo, tel, email, munsList, orgClass, txtCor) {
@@ -4321,17 +4393,17 @@ cat(r"---(
 
   window.alternarAba = function(abaId, atualizarHash) {
     var idAba = (abaId || '').replace(/^#/, '');
-    if (idAba !== 'mapa-dinamico' && idAba !== 'tabela-dados') {
-      idAba = 'mapa-dinamico';
+    if (idAba !== 'mapa-dinâmico' && idAba !== 'tabela-de-dados') {
+      idAba = 'mapa-dinâmico';
     }
 
-    var tabMapa = document.getElementById('tab-mapa-dinamico');
-    var tabTabela = document.getElementById('tab-tabela-dados');
-    var paneMapa = document.getElementById('mapa-dinamico');
-    var paneTabela = document.getElementById('tabela-dados');
+    var tabMapa = document.getElementById('tab-mapa-dinâmico');
+    var tabTabela = document.getElementById('tab-tabela-de-dados');
+    var paneMapa = document.getElementById('mapa-dinâmico');
+    var paneTabela = document.getElementById('tabela-de-dados');
     var tabContent = document.querySelector('.quarto-dashboard-content > .tab-content');
 
-    if (idAba === 'mapa-dinamico') {
+    if (idAba === 'mapa-dinâmico') {
       if (tabMapa) {
         tabMapa.classList.add('active');
         tabMapa.setAttribute('aria-selected', 'true');
@@ -4363,12 +4435,12 @@ cat(r"---(
 
       if (atualizarHash !== false) {
         if (window.history && window.history.replaceState) {
-          window.history.replaceState(null, null, '#mapa-dinamico');
+          window.history.replaceState(null, null, '#mapa-dinâmico');
         } else {
-          window.location.hash = '#mapa-dinamico';
+          window.location.hash = '#mapa-dinâmico';
         }
       }
-    } else if (idAba === 'tabela-dados') {
+    } else if (idAba === 'tabela-de-dados') {
       if (tabTabela) {
         tabTabela.classList.add('active');
         tabTabela.setAttribute('aria-selected', 'true');
@@ -4410,16 +4482,16 @@ cat(r"---(
 
       if (atualizarHash !== false) {
         if (window.history && window.history.replaceState) {
-          window.history.replaceState(null, null, '#tabela-dados');
+          window.history.replaceState(null, null, '#tabela-de-dados');
         } else {
-          window.location.hash = '#tabela-dados';
+          window.location.hash = '#tabela-de-dados';
         }
       }
     }
   };
 
   window.verNoMapa = function(nomeMun, superMun) {
-    window.alternarAba('mapa-dinamico', true);
+    window.alternarAba('mapa-dinâmico', true);
     setTimeout(function() {
       if (typeof window.selecionarSuperintendencia === 'function') {
         window.selecionarSuperintendencia(superMun, nomeMun);
@@ -4428,18 +4500,18 @@ cat(r"---(
   };
 
   function vincularEventosAbas() {
-    var tabMapa = document.getElementById('tab-mapa-dinamico');
-    var tabTabela = document.getElementById('tab-tabela-dados');
+    var tabMapa = document.getElementById('tab-mapa-dinâmico');
+    var tabTabela = document.getElementById('tab-tabela-de-dados');
     if (tabMapa) {
       tabMapa.addEventListener('click', function(e) {
         e.preventDefault();
-        window.alternarAba('mapa-dinamico');
+        window.alternarAba('mapa-dinâmico');
       });
     }
     if (tabTabela) {
       tabTabela.addEventListener('click', function(e) {
         e.preventDefault();
-        window.alternarAba('tabela-dados');
+        window.alternarAba('tabela-de-dados');
       });
     }
   }
@@ -4453,10 +4525,10 @@ cat(r"---(
       window.initTabelaDados(window.geojsonMun.features);
     }
     var h = window.location.hash;
-    if (h === '#tabela-dados') {
-      window.alternarAba('tabela-dados', false);
+    if (h === '#tabela-de-dados') {
+      window.alternarAba('tabela-de-dados', false);
     } else {
-      window.alternarAba('mapa-dinamico', false);
+      window.alternarAba('mapa-dinâmico', false);
     }
   }
 
@@ -4471,13 +4543,12 @@ cat(r"---(
       inserirBotaoMetodologia();
     }
     var h = window.location.hash;
-    if (h === '#tabela-dados') {
-      window.alternarAba('tabela-dados', false);
+    if (h === '#tabela-de-dados') {
+      window.alternarAba('tabela-de-dados', false);
     } else {
-      window.alternarAba('mapa-dinamico', false);
+      window.alternarAba('mapa-dinâmico', false);
     }
   });
 })();
 </script>
-)---")
 ```
