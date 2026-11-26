@@ -1083,8 +1083,22 @@ function(el, x, data) {
   // ------------------------------------------------------------------
   var TEMA = TEMAS[0];
   var sel = null;            // nome da superintendência selecionada
+  var filtroSuperAplicadoPeloMapa = null;
   var filtrosLegenda = new Set();  // categorias/valores filtrados na legenda
   var munLayer = null, destaqueLayer = null;
+
+  function sincronizarFiltroSuperTabela(nome) {
+    var select = document.getElementById('filtro-super');
+    if (!select || typeof window.aplicarFiltros !== 'function') return;
+    select.value = nome || '';
+    filtroSuperAplicadoPeloMapa = nome || null;
+    window.aplicarFiltros();
+  }
+
+  // A tabela chama este callback quando o usuário altera o filtro manualmente.
+  window.marcarFiltroSuperTabelaManual = function() {
+    filtroSuperAplicadoPeloMapa = null;
+  };
 
   map.createPane('mdnSuper');    map.getPane('mdnSuper').style.zIndex = 410;
   map.createPane('mdnMun');      map.getPane('mdnMun').style.zIndex = 420;
@@ -1736,6 +1750,7 @@ function(el, x, data) {
   // ------------------------------------------------------------------
   function selecionar(nome) {
     sel = nome;
+    sincronizarFiltroSuperTabela(nome);
     if (top25Layer && map.hasLayer(top25Layer)) {
       map.removeLayer(top25Layer);
     }
@@ -1770,6 +1785,12 @@ function(el, x, data) {
 
   function voltar() {
     esconderTooltip();
+    var filtroSuper = document.getElementById('filtro-super');
+    if (filtroSuper && filtroSuperAplicadoPeloMapa && filtroSuper.value === filtroSuperAplicadoPeloMapa) {
+      filtroSuper.value = '';
+      if (typeof window.aplicarFiltros === 'function') window.aplicarFiltros();
+    }
+    filtroSuperAplicadoPeloMapa = null;
     sel = null;
     if (superPinsLayer) { map.removeLayer(superPinsLayer); superPinsLayer = null; }
     if (top25Layer && !map.hasLayer(top25Layer)) {
@@ -4113,7 +4134,12 @@ leaflet(options = leafletOptions(zoomSnap = 0.25, zoomDelta = 0.5)) |>
 
     var superSelect = document.getElementById('filtro-super');
     if (superSelect) {
-      superSelect.addEventListener('change', function() { aplicarFiltros(); });
+      superSelect.addEventListener('change', function() {
+        if (typeof window.marcarFiltroSuperTabelaManual === 'function') {
+          window.marcarFiltroSuperTabelaManual();
+        }
+        aplicarFiltros();
+      });
     }
 
     var nivelSelect = document.getElementById('filtro-nivel');
